@@ -17,3 +17,4 @@ Thumbs.db # per Windows
 venv/
 *.venv
 env/
+src/__tests__
