@@ -18,3 +18,5 @@ venv/
 *.venv
 env/
 src/__tests__
+GTFS_COTRAL
+database.sqlite
