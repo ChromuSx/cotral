@@ -10,11 +10,11 @@ export class TransitsController {
         fastify.get('/transits/:poleCode', this.getTransitsByPoleCode.bind(this));
     }
 
-    private async getTransitsByPoleCode(request: any, reply: FastifyReply): Promise<void> {
-        const poleCode = request.params.poleCode as string;
+    private async getTransitsByPoleCode(request: FastifyRequest<{ Params: { poleCode: string } }>, reply: FastifyReply): Promise<void> {
+        const { poleCode } = request.params;
 
-        if (!poleCode) {
-            reply.status(400).send({ error: 'Invalid parameters' });
+        if (!poleCode?.trim()) {
+            reply.status(400).send({ error: 'Il parametro "poleCode" è obbligatorio' });
             return;
         }
 
@@ -22,7 +22,7 @@ export class TransitsController {
             const transits = await this.transitsService.getTransitsByPoleCode(poleCode);
             reply.status(200).send(transits);
         } catch (error) {
-            console.error('Error fetching transits by stop code:', error);
+            request.log.error(error, 'Error fetching transits by pole code');
             reply.status(500).send({ error: 'Internal server error' });
         }
     }

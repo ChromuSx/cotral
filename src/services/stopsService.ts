@@ -1,74 +1,76 @@
-import axios from 'axios';
-import { parseStringPromise } from 'xml2js';
 import { Stop } from '../interfaces/Stop';
+import { config } from '../config';
+import { fetchCotralXml, extractArray } from '../utils/cotralApi';
+import * as gtfs from './gtfsService';
 
 export class StopsService {
-    private baseURL: string;
-    private userId: string;
-
-    constructor() {
-        this.baseURL = 'http://travel.mob.cotralspa.it:7777/beApp';
-        this.userId = '1BB73DCDAFA007572FC51E7407AB497C';
-    }
-
     public async getFirstStopByLocality(locality: string): Promise<Stop | null> {
-        try {
-            const response = await axios.get(`${this.baseURL}/PIV.do`, {
-                params: {
-                    cmd: 6,
-                    userId: this.userId,
-                    pStringa: locality.toLowerCase()
-                }
-            });
-
-            const parsedResponse = await parseStringPromise(response.data);
-
-            if (parsedResponse.listaStop && parsedResponse.listaStop.stop && parsedResponse.listaStop.stop.length > 0) {
-                const stopData = parsedResponse.listaStop.stop[0];
-
-                return {
-                    codiceStop: stopData.codiceStop[0],
-                    nomeStop: stopData.nomeStop[0],
-                    localita: stopData.localita[0],
-                    coordX: parseFloat(stopData.coordX[0]),
-                    coordY: parseFloat(stopData.coordY[0])
-                };
-            }
-        } catch (error) {
-            console.error('Error fetching stop by ID:', error);
+        // Try GTFS first (instant, offline)
+        const gtfsStops = gtfs.findStopsByName(locality);
+        if (gtfsStops.length > 0) {
+            return this.mapGtfsStop(gtfsStops[0]);
         }
 
-        return null;
+        // Fallback to Cotral API
+        const parsed = await fetchCotralXml('PIV.do', {
+            cmd: 6,
+            userId: config.cotral.userId,
+            pStringa: locality.toLowerCase()
+        });
+
+        const stops = extractArray(parsed, 'listaStop', 'stop');
+        if (stops.length === 0) return null;
+        return this.mapXmlStop(stops[0]);
+    }
+
+    public async getFirstStopByStopCode(stopCode: string | number): Promise<Stop | null> {
+        // Try GTFS by stop ID
+        const gtfsStop = gtfs.findStopById(String(stopCode));
+        if (gtfsStop) return this.mapGtfsStop(gtfsStop);
+
+        // Fallback: search by code as text via API
+        const stops = await this.getStopsByLocality(String(stopCode));
+        return stops.find(s => s.codiceStop === String(stopCode)) || stops[0] || null;
     }
 
     public async getStopsByLocality(locality: string): Promise<Stop[]> {
-        try {
-            const response = await axios.get(`${this.baseURL}/PIV.do`, {
-                params: {
-                    cmd: 6,
-                    userId: this.userId,
-                    pStringa: locality,
-                    pFormato: 'xml'
-                }
-            });
-
-            const parsedResponse = await parseStringPromise(response.data);
-            if (parsedResponse.listaStop && parsedResponse.listaStop.stop && parsedResponse.listaStop.stop.length > 0) {
-                const stopsData = parsedResponse.listaStop.stop;
-
-                return stopsData.map((stopData: any) => ({
-                    codiceStop: stopData.codiceStop[0],
-                    nomeStop: stopData.nomeStop[0],
-                    localita: stopData.localita[0],
-                    coordX: parseFloat(stopData.coordX[0]),
-                    coordY: parseFloat(stopData.coordY[0])
-                }));
-            }
-        } catch (error) {
-            console.error('Error searching stops:', error);
-            return [];
+        // Try GTFS first
+        const gtfsStops = gtfs.findStopsByName(locality);
+        if (gtfsStops.length > 0) {
+            return gtfsStops.map(s => this.mapGtfsStop(s));
         }
 
-        return [];
+        // Fallback to Cotral API
+        const parsed = await fetchCotralXml('PIV.do', {
+            cmd: 6,
+            userId: config.cotral.userId,
+            pStringa: locality.toLowerCase()
+        });
+
+        const stops = extractArray(parsed, 'listaStop', 'stop');
+        return stops.map((stopData: Record<string, string[]>) => this.mapXmlStop(stopData));
+    }
+
+    private mapGtfsStop(s: gtfs.GtfsStop): Stop {
+        // Extract locality from stop name (format: "CITY | Details" or "CITY (Details)")
+        const parts = s.stopName.split(/[|!(]/);
+        const localita = parts[0].trim();
+        return {
+            codiceStop: s.stopId,
+            nomeStop: s.stopName,
+            localita,
+            coordX: s.stopLat,
+            coordY: s.stopLon
+        };
+    }
+
+    private mapXmlStop(stopData: Record<string, string[]>): Stop {
+        return {
+            codiceStop: stopData.codiceStop?.[0] ?? '',
+            nomeStop: stopData.nomeStop?.[0] ?? '',
+            localita: stopData.localita?.[0] ?? '',
+            coordX: parseFloat(stopData.coordX?.[0]) || 0,
+            coordY: parseFloat(stopData.coordY?.[0]) || 0
+        };
     }
 }

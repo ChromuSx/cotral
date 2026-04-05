@@ -10,11 +10,11 @@ export class VehiclesController {
         fastify.get('/vehiclerealtimepositions/:vehicleCode', this.getVehicleRealTimePositions.bind(this));
     }
 
-    private async getVehicleRealTimePositions(request: any, reply: FastifyReply): Promise<void> {
-        const vehicleCode = request.params.vehicleCode as string;
+    private async getVehicleRealTimePositions(request: FastifyRequest<{ Params: { vehicleCode: string } }>, reply: FastifyReply): Promise<void> {
+        const { vehicleCode } = request.params;
 
-        if (!vehicleCode) {
-            reply.status(400).send({ error: 'Invalid parameters' });
+        if (!vehicleCode?.trim()) {
+            reply.status(400).send({ error: 'Il parametro "vehicleCode" è obbligatorio' });
             return;
         }
 
@@ -22,7 +22,7 @@ export class VehiclesController {
             const vehicleRealTimePositions = await this.vehiclesService.getVehicleRealTimePositions(vehicleCode);
             reply.status(200).send(vehicleRealTimePositions);
         } catch (error) {
-            console.error('Error fetching vehicles locations:', error);
+            request.log.error(error, 'Error fetching vehicles locations');
             reply.status(500).send({ error: 'Internal server error' });
         }
     }

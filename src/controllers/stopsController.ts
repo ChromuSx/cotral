@@ -11,11 +11,11 @@ export class StopsController {
         fastify.get('/stops/:locality', this.getStopsByLocality.bind(this));
     }
 
-    public async getStopsByLocality(request: any, reply: FastifyReply): Promise<void> {
-        const locality = request.params.locality as string;
+    public async getStopsByLocality(request: FastifyRequest<{ Params: { locality: string } }>, reply: FastifyReply): Promise<void> {
+        const { locality } = request.params;
 
-        if (!locality) {
-            reply.status(400).send({ error: 'Invalid parameters' });
+        if (!locality?.trim()) {
+            reply.status(400).send({ error: 'Il parametro "locality" è obbligatorio' });
             return;
         }
 
@@ -23,16 +23,16 @@ export class StopsController {
             const stops = await this.stopsService.getStopsByLocality(locality);
             reply.status(200).send(stops);
         } catch (error) {
-            console.error('Error searching stops:', error);
+            request.log.error(error, 'Error searching stops');
             reply.status(500).send({ error: 'Internal server error' });
         }
     }
 
-    private async getFirstStopByLocality(request: any, reply: FastifyReply): Promise<void> {
-        const locality = request.params.locality as string;
+    private async getFirstStopByLocality(request: FastifyRequest<{ Params: { locality: string } }>, reply: FastifyReply): Promise<void> {
+        const { locality } = request.params;
 
-        if (!locality) {
-            reply.status(400).send({ error: 'Invalid parameters' });
+        if (!locality?.trim()) {
+            reply.status(400).send({ error: 'Il parametro "locality" è obbligatorio' });
             return;
         }
 
@@ -40,7 +40,7 @@ export class StopsController {
             const stop = await this.stopsService.getFirstStopByLocality(locality);
             reply.status(200).send(stop);
         } catch (error) {
-            console.error('Error fetching stop by id:', error);
+            request.log.error(error, 'Error fetching stop by locality');
             reply.status(500).send({ error: 'Internal server error' });
         }
     }

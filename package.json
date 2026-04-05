@@ -6,19 +6,25 @@
     "scripts": {
         "build": "tsc",
         "start": "tsc && node dist/app.js",
-        "dev": "tsc && node dist/app.js"
+        "dev": "tsc && node dist/app.js",
+        "test": "vitest run"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "adm-zip": "^0.5.12",
         "axios": "^1.6.7",
+        "dotenv": "^16.3.1",
         "fastify": "^4.26.2",
-        "sqlite3": "^5.1.7",
+        "better-sqlite3": "^11.0.0",
         "typescript": "^5.4.4",
         "xml2js": "^0.6.2"
     },
     "devDependencies": {
-        "@types/xml2js": "^0.4.14"
+        "@types/adm-zip": "^0.5.5",
+        "@types/better-sqlite3": "^7.6.9",
+        "@types/xml2js": "^0.4.14",
+        "vitest": "^1.6.0"
     }
 }

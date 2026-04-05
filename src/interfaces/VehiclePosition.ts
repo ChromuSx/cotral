@@ -1,5 +1,5 @@
 export interface VehiclePosition {
-    coordX: string;
-    coordY: string;
+    coordX: string[];
+    coordY: string[];
     time: string;
 }

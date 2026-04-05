@@ -353,6 +353,39 @@ paths:
       in: path
       required: true
       type: string
+  /vehiclerealtimepositions/{vehicleCode}:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - Vehicle
+      parameters:
+      - name: vehicleCode
+        description: Il codice del veicolo per cui si desidera ottenere la posizione in tempo reale.
+        in: path
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Restituisce le posizioni in tempo reale del veicolo specificato.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/VehiclePosition'
+        "400":
+          description: Parametri invalidi. Assicurati che il codice del veicolo sia fornito correttamente.
+        "500":
+          description: Errore interno del server.
+      operationId: getVehicleRealTimePositions
+      summary: Ottiene le posizioni in tempo reale di un veicolo
+      description: Questo endpoint restituisce le posizioni GPS in tempo reale di un veicolo Cotral specifico.
+    parameters:
+    - name: vehicleCode
+      in: path
+      required: true
+      type: string
   /poles/favorites:
     post:
       consumes:
@@ -368,7 +401,6 @@ paths:
           required:
           - userId
           - poleCode
-          - stopCode
           type: object
           properties:
             userId:
@@ -377,9 +409,12 @@ paths:
             poleCode:
               description: Codice identificativo della palina da aggiungere ai preferiti.
               type: string
-            stopCode:
-              description: Codice della fermata associata alla palina.
-              type: integer
+            poleLat:
+              description: Latitudine della palina.
+              type: number
+            poleLon:
+              description: Longitudine della palina.
+              type: number
         in: body
         required: true
       responses:
@@ -531,8 +566,12 @@ definitions:
     type: object
     properties:
       coordX:
-        type: string
+        type: array
+        items:
+          type: string
       coordY:
-        type: string
+        type: array
+        items:
+          type: string
       time:
         type: string

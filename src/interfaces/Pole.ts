@@ -10,8 +10,8 @@ export interface Pole {
     zonaTariffaria?: string;
     distanza?: string;
     destinazioni?: string[];
-    isCotral?: number;
-    isCapolinea?: number;
-    isBanchinato?: number;
+    isCotral?: number | null;
+    isCapolinea?: number | null;
+    isBanchinato?: number | null;
     preferita?: boolean;
 }
