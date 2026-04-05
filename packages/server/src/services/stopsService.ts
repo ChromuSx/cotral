@@ -1,4 +1,4 @@
-import { Stop } from '../interfaces/Stop';
+import { Stop } from '@cotral/shared';
 import { config } from '../config';
 import { fetchCotralXml, extractArray } from '../utils/cotralApi';
 import * as gtfs from './gtfsService';

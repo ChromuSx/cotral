@@ -1,0 +1,23 @@
+{
+  "name": "@cotral/bot",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node dist/app.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cotral/shared": "1.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "telegraf": "^4.15.0",
+    "telegraf-session-local": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.10",
+    "typescript": "^5.4.4",
+    "vitest": "^1.6.0"
+  }
+}

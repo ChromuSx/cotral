@@ -1,7 +1,5 @@
 import { convertToReadableTime } from '../utils/timeUtils';
-import { Pole } from '../interfaces/Pole';
-import { Transit } from '../interfaces/Transit';
-import { Vehicle } from '../interfaces/Vehicle';
+import { Pole, Transit, Vehicle } from '@cotral/shared';
 import { config } from '../config';
 import { fetchCotralXml, normalizeLatLon } from '../utils/cotralApi';
 

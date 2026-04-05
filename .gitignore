@@ -1,22 +1,14 @@
-*.log
-
 node_modules/
-
-/dist
-/build
-/bin
-
+dist/
 .env
+*.log
+.DS_Store
+Thumbs.db
 
-.DS_Store # per macOS
-Thumbs.db # per Windows
+# Server runtime
+packages/server/database.sqlite
+packages/server/GTFS_COTRAL/
 
-/out
-/obj
-
-venv/
-*.venv
-env/
-src/__tests__
-GTFS_COTRAL
-database.sqlite
+# Bot runtime
+packages/bot/session_db.json
+packages/bot/database.sqlite

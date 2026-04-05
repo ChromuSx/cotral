@@ -1,0 +1,27 @@
+{
+  "name": "@cotral/server",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node dist/app.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cotral/shared": "1.0.0",
+    "adm-zip": "^0.5.12",
+    "axios": "^1.6.7",
+    "better-sqlite3": "^11.0.0",
+    "dotenv": "^16.3.1",
+    "fastify": "^4.26.2",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
+    "@types/better-sqlite3": "^7.6.9",
+    "@types/xml2js": "^0.4.14",
+    "typescript": "^5.4.4",
+    "vitest": "^1.6.0"
+  }
+}

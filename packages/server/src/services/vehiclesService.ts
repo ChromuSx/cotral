@@ -1,4 +1,4 @@
-import { VehiclePosition } from '../interfaces/VehiclePosition';
+import { VehiclePosition } from '@cotral/shared';
 import { config } from '../config';
 import { fetchCotralXml, extractArray } from '../utils/cotralApi';
 

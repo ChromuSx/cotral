@@ -1,4 +1,4 @@
-import { Pole } from '../interfaces/Pole';
+import { Pole } from '@cotral/shared';
 import { StopsService } from './stopsService';
 import { dbAll, dbRun } from '../database';
 import { config } from '../config';
