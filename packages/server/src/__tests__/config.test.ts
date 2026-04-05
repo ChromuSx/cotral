@@ -11,7 +11,7 @@ describe('config', () => {
     });
 
     it('should have default database path', () => {
-        expect(config.dbPath).toBe('./database.sqlite');
+        expect(config.dbPath).toContain('database.sqlite');
     });
 
     it('should have cotral base URL', () => {

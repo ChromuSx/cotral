@@ -50,7 +50,7 @@ Cotral Server API e' un servizio backend TypeScript che fornisce dati del traspo
 ## Architettura
 
 ```
-cotral-server-api/
+packages/server/
 ├── src/
 │   ├── controllers/        # Gestione richieste HTTP
 │   ├── services/           # Logica di business
@@ -60,7 +60,6 @@ cotral-server-api/
 │   │   ├── transitsService.ts  # Transiti real-time (API)
 │   │   └── vehiclesService.ts  # Posizioni veicoli (API)
 │   ├── routes/             # Definizione route Fastify
-│   ├── interfaces/         # TypeScript interfaces
 │   ├── utils/
 │   │   ├── cotralApi.ts    # Helper chiamate API Cotral
 │   │   ├── gtfsDownloader.ts   # Download automatico GTFS

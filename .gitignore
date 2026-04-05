@@ -2,13 +2,12 @@ node_modules/
 dist/
 .env
 *.log
+*.sqlite
 .DS_Store
 Thumbs.db
 
 # Server runtime
-packages/server/database.sqlite
 packages/server/GTFS_COTRAL/
 
 # Bot runtime
 packages/bot/session_db.json
-packages/bot/database.sqlite
