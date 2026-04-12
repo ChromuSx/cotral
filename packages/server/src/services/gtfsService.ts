@@ -211,6 +211,7 @@ export function loadGtfs(): void {
     newMtimes.set('stop_times.txt', stopTimesData.mtime);
     fileMtimes = newMtimes;
     loaded = true;
+    localitiesCache = null;
 
     console.log(`GTFS loaded: ${data.stops.length} stops, ${data.routes.size} routes, ${data.stopToRouteIds.size} stop-route mappings in ${Date.now() - start}ms`);
 }
@@ -260,6 +261,30 @@ export function getRoutesForStop(stopId: string): GtfsRoute[] {
     return [...routeIds]
         .map(id => data.routes.get(id))
         .filter((r): r is GtfsRoute => r !== undefined);
+}
+
+// --- Locality search (for autocomplete) ---
+
+let localitiesCache: string[] | null = null;
+
+export function getAllLocalities(): string[] {
+    ensureLoaded();
+    if (localitiesCache) return localitiesCache;
+    const set = new Set<string>();
+    for (const s of data.stops) {
+        const parts = s.stopName.split(/[|!(]/);
+        const loc = parts[0].trim();
+        if (loc) set.add(loc);
+    }
+    localitiesCache = [...set].sort();
+    return localitiesCache;
+}
+
+export function searchLocalities(query: string, limit: number = 25): string[] {
+    const q = query.toLowerCase();
+    return getAllLocalities()
+        .filter(loc => loc.toLowerCase().includes(q))
+        .slice(0, limit);
 }
 
 export function getDestinationsForStop(stopId: string): string[] {
