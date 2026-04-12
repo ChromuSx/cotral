@@ -11,3 +11,4 @@ packages/server/GTFS_COTRAL/
 
 # Bot runtime
 packages/bot/session_db.json
+.claude
