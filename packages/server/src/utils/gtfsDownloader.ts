@@ -63,7 +63,9 @@ function downloadFile(url: string): Promise<Buffer> {
 
             const chunks: Buffer[] = [];
             response.on('data', (chunk: Buffer) => chunks.push(chunk));
-            response.on('end', () => resolve(Buffer.concat(chunks)));
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { Buffer: NodeBuffer } = require('node:buffer');
+            response.on('end', () => resolve(NodeBuffer.concat(chunks)));
             response.on('error', reject);
         });
 

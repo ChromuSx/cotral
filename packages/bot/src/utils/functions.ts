@@ -16,3 +16,11 @@ export function formatBoolean(value: boolean | null | undefined): string {
         return 'Non disponibile';
     }
 }
+
+export function chunkArray<T>(arr: T[], size: number): T[][] {
+    const result: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+        result.push(arr.slice(i, i + size));
+    }
+    return result;
+}

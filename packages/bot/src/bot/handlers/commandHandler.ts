@@ -14,7 +14,7 @@ export async function handleCommand(ctx: ExtendedContext, text: string) {
         } else if (sessionAction) {
             await sessionAction(ctx, text, userId);
         } else {
-            await ctx.reply('Comando non riconosciuto');
+            await ctx.reply('\u26A0\uFE0F Comando non riconosciuto.\n\nUsa i pulsanti del menu o digita /start.');
         }
     } catch (error) {
         await handleErrors(ctx, error);
