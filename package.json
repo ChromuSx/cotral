@@ -5,17 +5,22 @@
   "workspaces": [
     "packages/shared",
     "packages/server",
-    "packages/bot"
+    "packages/telegram-bot",
+    "packages/discord-bot"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
     "build:shared": "npm run build -w @cotral/shared",
     "build:server": "npm run build -w @cotral/server",
-    "build:bot": "npm run build -w @cotral/bot",
+    "build:telegram-bot": "npm run build -w @cotral/telegram-bot",
+    "build:discord-bot": "npm run build -w @cotral/discord-bot",
     "start:server": "npm run start -w @cotral/server",
-    "start:bot": "npm run start -w @cotral/bot",
+    "start:telegram-bot": "npm run start -w @cotral/telegram-bot",
+    "start:discord-bot": "npm run start -w @cotral/discord-bot",
+    "deploy-commands:discord": "npm run deploy-commands -w @cotral/discord-bot",
     "test": "npm run test --workspaces",
     "test:server": "npm run test -w @cotral/server",
-    "test:bot": "npm run test -w @cotral/bot"
+    "test:telegram-bot": "npm run test -w @cotral/telegram-bot",
+    "test:discord-bot": "npm run test -w @cotral/discord-bot"
   }
 }

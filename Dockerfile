@@ -9,7 +9,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/server/package.json ./packages/server/
-COPY packages/bot/package.json ./packages/bot/
+COPY packages/telegram-bot/package.json ./packages/telegram-bot/
+COPY packages/discord-bot/package.json ./packages/discord-bot/
 
 RUN npm ci
 
@@ -26,8 +27,14 @@ COPY --from=build /app ./
 EXPOSE 3000
 CMD ["node", "packages/server/dist/app.js"]
 
-# ---- Bot ----
-FROM node:20-alpine AS bot
+# ---- Telegram Bot ----
+FROM node:20-alpine AS telegram-bot
 WORKDIR /app
 COPY --from=build /app ./
-CMD ["node", "packages/bot/dist/app.js"]
+CMD ["node", "packages/telegram-bot/dist/app.js"]
+
+# ---- Discord Bot ----
+FROM node:20-alpine AS discord-bot
+WORKDIR /app
+COPY --from=build /app ./
+CMD ["node", "packages/discord-bot/dist/app.js"]

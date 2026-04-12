@@ -9,4 +9,4 @@ dist
 Thumbs.db
 .env
 packages/server/GTFS_COTRAL
-packages/bot/session_db.json
+packages/telegram-bot/session_db.json

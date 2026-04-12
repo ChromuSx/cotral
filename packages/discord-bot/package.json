@@ -1,0 +1,23 @@
+{
+  "name": "@cotral/discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node dist/app.js",
+    "deploy-commands": "tsc && node dist/bot/deploy-commands.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cotral/shared": "1.0.0",
+    "axios": "^1.6.0",
+    "discord.js": "^14.14.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.10",
+    "typescript": "^5.4.4",
+    "vitest": "^1.6.0"
+  }
+}

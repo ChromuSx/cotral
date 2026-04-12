@@ -18,10 +18,10 @@ services:
       - "3001:3000"
     restart: unless-stopped
 
-  bot:
+  telegram-bot:
     build:
       context: .
-      target: bot
+      target: telegram-bot
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       API_BASE_URL: http://server:3000
@@ -29,11 +29,25 @@ services:
       LOG_LEVEL: info
       ALLOWED_USER_IDS: ${ALLOWED_USER_IDS:-}
     volumes:
-      - bot-data:/data
+      - telegram-bot-data:/data
+    depends_on:
+      - server
+    restart: unless-stopped
+
+  discord-bot:
+    build:
+      context: .
+      target: discord-bot
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      API_BASE_URL: http://server:3000
+      LOG_LEVEL: info
+      ALLOWED_USER_IDS: ${DISCORD_ALLOWED_USER_IDS:-}
     depends_on:
       - server
     restart: unless-stopped
 
 volumes:
   server-data:
-  bot-data:
+  telegram-bot-data:
