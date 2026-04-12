@@ -1,6 +1,8 @@
 node_modules/
 dist/
+*.tsbuildinfo
 .env
+.deploy.env
 *.log
 *.sqlite
 .DS_Store
@@ -10,5 +12,5 @@ Thumbs.db
 packages/server/GTFS_COTRAL/
 
 # Bot runtime
-packages/bot/session_db.json
+packages/telegram-bot/session_db.json
 .claude
