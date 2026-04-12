@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.github
+.claude
+*.sqlite
+*.log
+.DS_Store
+Thumbs.db
+.env
+packages/server/GTFS_COTRAL
+packages/bot/session_db.json

@@ -1,0 +1,39 @@
+services:
+  server:
+    build:
+      context: .
+      target: server
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      DB_PATH: /data/database.sqlite
+      GTFS_PATH: /data/GTFS_COTRAL
+      GTFS_URL: https://travel.mob.cotralspa.it:4443/GTFS/GTFS_COTRAL.zip
+      COTRAL_BASE_URL: http://travel.mob.cotralspa.it:7777/beApp
+      COTRAL_USER_ID: 1BB73DCDAFA007572FC51E7407AB497C
+      COTRAL_DELTA: "261"
+    volumes:
+      - server-data:/data
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      target: bot
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      API_BASE_URL: http://server:3000
+      SESSION_DB_PATH: /data/session_db.json
+      LOG_LEVEL: info
+      ALLOWED_USER_IDS: ${ALLOWED_USER_IDS:-}
+    volumes:
+      - bot-data:/data
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  server-data:
+  bot-data:
