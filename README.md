@@ -6,25 +6,31 @@
 
 <div align="center">
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+<img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+<img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js">
+<img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+<img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT">
 
-[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white)](https://github.com/sponsors/ChromuSx)
-[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/chromus)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/chromus)
-[![PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/paypalme/giovanniguarino1999)
+</div>
+
+<p align="center">
+  <a href="https://github.com/sponsors/ChromuSx"><img src="https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="GitHub Sponsors"></a>
+  <a href="https://ko-fi.com/chromus"><img src="https://img.shields.io/badge/Support-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
+  <a href="https://buymeacoffee.com/chromus"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"></a>
+  <a href="https://www.paypal.com/paypalme/giovanniguarino1999"><img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal"></a>
+</p>
+
+<div align="center">
 
 **Monorepo per il trasporto pubblico Cotral: server API + bot Telegram + bot Discord**
 
 </div>
 
-## Panoramica
+## 📖 Panoramica
 
 Stack completo per consultare il trasporto pubblico Cotral (Lazio): un server API che unifica i dati GTFS offline e le API XML Cotral in tempo reale, più due bot (Telegram e Discord) che lo consumano.
 
-## Pacchetti
+## 📦 Pacchetti
 
 | Pacchetto | Descrizione |
 |-----------|-------------|
@@ -33,13 +39,13 @@ Stack completo per consultare il trasporto pubblico Cotral (Lazio): un server AP
 | [`@cotral/discord-bot`](packages/discord-bot) | Bot Discord (discord.js) con slash commands, autocomplete e select menu |
 | [`@cotral/shared`](packages/shared) | Tipi TypeScript e utility condivise tra i pacchetti |
 
-## Prerequisiti
+## 🔧 Prerequisiti
 
 - **Node.js** >= 18.x
 - **npm** >= 8.x (workspaces)
 - Per il deploy in container: **Docker** + **Docker Compose**
 
-## Installazione
+## 🚀 Installazione
 
 ```bash
 git clone https://github.com/ChromuSx/cotral.git
@@ -47,7 +53,7 @@ cd cotral
 npm install      # installa le dipendenze di tutti i workspace
 ```
 
-## Configurazione
+## ⚙️ Configurazione
 
 Ogni pacchetto ha il proprio `.env` (gitignored). Vedi i README dei singoli pacchetti per le variabili specifiche:
 
@@ -65,7 +71,7 @@ ALLOWED_USER_IDS=...
 DISCORD_ALLOWED_USER_IDS=...
 ```
 
-## Sviluppo locale (senza Docker)
+## 💻 Sviluppo locale (senza Docker)
 
 ```bash
 npm run build                    # build di tutti i workspace
@@ -84,7 +90,7 @@ npm run build:telegram-bot
 npm run build:discord-bot
 ```
 
-## Avvio con Docker
+## 🐳 Avvio con Docker
 
 Stack completo (server + entrambi i bot):
 
@@ -98,7 +104,7 @@ Caratteristiche:
 - Tutti i container girano in `Europe/Rome` (`TZ` impostato sia in `docker-compose.yml` che nel `Dockerfile` con `tzdata`)
 - Volumi nominati per persistenza GTFS / SQLite / sessioni Telegram
 
-## Test
+## 🧪 Test
 
 ```bash
 npm test                       # esegue i test di tutti i workspace
@@ -107,7 +113,7 @@ npm run test:telegram-bot
 npm run test:discord-bot
 ```
 
-## Struttura del repository
+## 📂 Struttura del repository
 
 ```
 cotral/
@@ -121,10 +127,25 @@ cotral/
 └── package.json         # workspaces npm
 ```
 
-## Licenza
+## 💖 Supporta il progetto
+
+Questo progetto è libero e open source. Se lo trovi utile, considera di supportarne lo sviluppo — ogni contributo è prezioso e davvero apprezzato! ❤️
+
+<p align="center">
+  <a href="https://github.com/sponsors/ChromuSx"><img src="https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="GitHub Sponsors"></a>
+  <a href="https://ko-fi.com/chromus"><img src="https://img.shields.io/badge/Support-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
+  <a href="https://buymeacoffee.com/chromus"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"></a>
+  <a href="https://www.paypal.com/paypalme/giovanniguarino1999"><img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal"></a>
+</p>
+
+## 📄 Licenza
 
 MIT — vedi [LICENSE](LICENSE).
 
-## Autore
+## 👤 Autore
 
 **Giovanni Guarino** — [@ChromuSx](https://github.com/ChromuSx)
+
+<div align="center">
+  <sub>Realizzato con ❤️ da <a href="https://github.com/ChromuSx">Giovanni Guarino</a></sub>
+</div>
