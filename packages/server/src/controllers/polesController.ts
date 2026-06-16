@@ -19,7 +19,7 @@ export class PolesController {
 
     public async getPolesByStopCode(request: FastifyRequest<{ Params: { stopCode: string }; Querystring: { userId?: string } }>, reply: FastifyReply): Promise<void> {
         const { stopCode } = request.params;
-        const userId = request.query.userId ? parseInt(request.query.userId, 10) : undefined;
+        const userId = request.query.userId?.trim();
 
         try {
             const poles = await this.polesService.getPolesByStopCode(stopCode);
@@ -104,10 +104,10 @@ export class PolesController {
     }
 
     public async getFavoritePoles(request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply): Promise<void> {
-        const userId = parseInt(request.params.userId, 10);
+        const userId = request.params.userId?.trim();
 
-        if (isNaN(userId)) {
-            reply.status(400).send({ error: 'Il parametro "userId" deve essere un numero valido' });
+        if (!userId) {
+            reply.status(400).send({ error: 'Il parametro "userId" è obbligatorio' });
             return;
         }
 
@@ -120,10 +120,12 @@ export class PolesController {
         }
     }
 
-    public async addFavoritePole(request: FastifyRequest<{ Body: { userId: number; poleCode: string; poleLat: number; poleLon: number } }>, reply: FastifyReply): Promise<void> {
-        const { userId, poleCode, poleLat, poleLon } = request.body;
+    public async addFavoritePole(request: FastifyRequest<{ Body: { userId: string | number; poleCode: string; poleLat: number; poleLon: number } }>, reply: FastifyReply): Promise<void> {
+        const body = request.body ?? {} as { userId?: string | number; poleCode?: string; poleLat?: number; poleLon?: number };
+        const userId = body.userId === undefined || body.userId === null ? '' : String(body.userId).trim();
+        const { poleCode, poleLat, poleLon } = body;
 
-        if (userId === undefined || userId === null || !poleCode) {
+        if (!userId || !poleCode) {
             reply.status(400).send({ error: 'I parametri "userId" e "poleCode" sono obbligatori' });
             return;
         }
@@ -137,10 +139,12 @@ export class PolesController {
         }
     }
 
-    public async removeFavoritePole(request: FastifyRequest<{ Body: { userId: number; poleCode: string } }>, reply: FastifyReply): Promise<void> {
-        const { userId, poleCode } = request.body;
+    public async removeFavoritePole(request: FastifyRequest<{ Body: { userId: string | number; poleCode: string } }>, reply: FastifyReply): Promise<void> {
+        const body = request.body ?? {} as { userId?: string | number; poleCode?: string };
+        const userId = body.userId === undefined || body.userId === null ? '' : String(body.userId).trim();
+        const { poleCode } = body;
 
-        if (userId === undefined || userId === null || !poleCode) {
+        if (!userId || !poleCode) {
             reply.status(400).send({ error: 'I parametri "userId" e "poleCode" sono obbligatori' });
             return;
         }

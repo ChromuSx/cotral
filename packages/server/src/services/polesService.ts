@@ -109,7 +109,7 @@ export class PolesService {
         return [...allDestinations];
     }
 
-    public checkFavoritePoleCodes(userId: number, poleCodes: string[]): Set<string> {
+    public checkFavoritePoleCodes(userId: string, poleCodes: string[]): Set<string> {
         if (poleCodes.length === 0) return new Set();
         const placeholders = poleCodes.map(() => '?').join(',');
         const rows = dbAll<{ pole_code: string }>(
@@ -119,7 +119,7 @@ export class PolesService {
         return new Set(rows.map(r => r.pole_code));
     }
 
-    public async getFavoritePoles(userId: number): Promise<Pole[]> {
+    public async getFavoritePoles(userId: string): Promise<Pole[]> {
         const rows = dbAll<FavoritePoleRow>(
             'SELECT pole_code, pole_lat, pole_lon FROM favorite_poles WHERE user_id = ?',
             [userId]
@@ -147,14 +147,14 @@ export class PolesService {
         return favoritePoles;
     }
 
-    public addFavoritePole(userId: number, poleCode: string, poleLat: number, poleLon: number): void {
+    public addFavoritePole(userId: string, poleCode: string, poleLat: number, poleLon: number): void {
         dbRun(
             'INSERT OR REPLACE INTO favorite_poles(user_id, pole_code, pole_lat, pole_lon) VALUES(?, ?, ?, ?)',
             [userId, poleCode, poleLat, poleLon]
         );
     }
 
-    public removeFavoritePole(userId: number, poleCode: string): void {
+    public removeFavoritePole(userId: string, poleCode: string): void {
         dbRun('DELETE FROM favorite_poles WHERE user_id = ? AND pole_code = ?', [userId, poleCode]);
     }
 
