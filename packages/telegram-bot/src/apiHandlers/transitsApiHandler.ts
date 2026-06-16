@@ -4,6 +4,7 @@ import { fetchData } from '../utils/apiUtils';
 import { logger } from '../utils/logger';
 import { Emoji, bold, escapeHtml, divider, relativeTime, parseTime, nowTimestamp } from '../utils/messageFormatting';
 import { chunkArray } from '../utils/functions';
+import { getVehicleRealTimePositions, VehiclePositionContext } from './vehiclesApiHandler';
 
 interface TransitsResponse {
     pole: Pole;
@@ -178,6 +179,54 @@ export async function refreshTransitsByPoleCode(ctx: Context, poleCode: string):
     }
 }
 
+export async function showVehiclePositionForTransit(ctx: Context, poleCode: string, index: number): Promise<void> {
+    const apiUrl = `/transits/${encodeURIComponent(poleCode)}`;
+
+    try {
+        await ctx.sendChatAction('typing');
+        const response = await fetchData<TransitsResponse>(apiUrl);
+        if (!response?.transits?.length) {
+            await ctx.reply(`${Emoji.SEARCH} Transito non più disponibile.`);
+            return;
+        }
+
+        const sorted = sortTransitsByDisplayTime(response.transits);
+        const transit = sorted[index];
+        const vehicleCode = transit?.automezzo?.codice;
+        if (!transit || !vehicleCode) {
+            await ctx.reply(`${Emoji.SEARCH} Posizione veicolo non disponibile per questo transito.`);
+            return;
+        }
+
+        await getVehicleRealTimePositions(ctx, vehicleCode, buildVehiclePositionContext(transit, poleCode, index));
+    } catch (error) {
+        logger.error('Errore posizione veicolo da transito', error, { poleCode, index });
+        await ctx.reply(`${Emoji.WARNING} Errore nel recupero della posizione.`);
+    }
+}
+
+function buildVehiclePositionContext(transit: Transit, poleCode: string, index: number): VehiclePositionContext {
+    const partenza = transit.partenzaCorsa || 'N/D';
+    const arrivo = transit.arrivoCorsa || 'N/D';
+    const status = getTransitTrackingStatus(transit);
+    const delayLabel = status === 'realtime' && transit.ritardo && transit.ritardo !== '00:00'
+        ? formatTransitDelayLabel(transit.ritardo)
+        : undefined;
+
+    return {
+        route: `${partenza} → ${arrivo}`,
+        transitTime: getTransitDisplayTime(transit) || undefined,
+        arrivalTime: transit.orarioArrivoCorsa || undefined,
+        delayLabel,
+        trackingLabel: status === 'realtime'
+            ? 'real-time Cotral'
+            : status === 'monitored_offline'
+                ? 'tracciata, bus non in trasmissione'
+                : 'schedulata, no real-time',
+        refreshCallbackData: `vehicles:fromTransit:${poleCode}:${index}`,
+    };
+}
+
 export async function showTransitDetail(ctx: Context, poleCode: string, index: number): Promise<void> {
     const apiUrl = `/transits/${encodeURIComponent(poleCode)}`;
 
@@ -204,7 +253,7 @@ export async function showTransitDetail(ctx: Context, poleCode: string, index: n
         if (transit.automezzo?.codice) {
             keyboard.push([{
                 text: `${Emoji.GEAR} Posizione veicolo`,
-                callback_data: `vehicles:getVehicleRealTimePositions:${transit.automezzo.codice}`
+                callback_data: `vehicles:fromTransit:${poleCode}:${index}`
             }]);
         }
         keyboard.push([

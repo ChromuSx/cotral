@@ -52,6 +52,11 @@ export async function handleCallbackQuery(ctx:  NarrowedContext<ExtendedContext,
         } else if (contextAction === 'vehicles' && parts[2]) {
             if (action === 'getVehicleRealTimePositions') {
                 await vehiclesApiHandler.getVehicleRealTimePositions(ctx, parts[2]);
+            } else if (action === 'fromTransit' && parts[3]) {
+                const index = parseInt(parts[3], 10);
+                if (!isNaN(index)) {
+                    await transitsApiHandler.showVehiclePositionForTransit(ctx, parts[2], index);
+                }
             }
         } else if (contextAction === 'sel') {
             if (action === 'pole' && parts[2]) {

@@ -31,8 +31,28 @@ describe('vehicle position response normalization', () => {
         const message = formatVehiclePositionMessage('4150', { coordX: ['41.69878'], coordY: ['13.58221'], time: '10:30:41' });
 
         expect(message).toContain('Veicolo 4150');
-        expect(message).toContain('Ultimo aggiornamento:</b> 10:30:41');
+        expect(message).toContain('Posizione aggiornata:</b> 10:30:41');
+        expect(message).toContain('Coordinate:</b> 41.69878, 13.58221');
         expect(message).toContain('https://www.google.com/maps?q=41.69878,13.58221');
         expect(message).not.toContain('────────');
+    });
+
+    it('adds transit context when the vehicle position comes from a selected ride', () => {
+        const message = formatVehiclePositionMessage(
+            '4150',
+            { coordX: ['41.69878'], coordY: ['13.58221'], time: '10:30:41' },
+            {
+                route: 'SORA → CASSINO',
+                transitTime: '10:42',
+                arrivalTime: '11:15',
+                trackingLabel: 'real-time Cotral',
+                delayLabel: 'Stima Cotral: ritardo 00:05',
+            }
+        );
+
+        expect(message).toContain('Corsa:</b> SORA → CASSINO');
+        expect(message).toContain('Orari corsa:</b> transito 10:42 · arrivo 11:15');
+        expect(message).toContain('Stato:</b> real-time Cotral');
+        expect(message).toContain('Stima Cotral: ritardo 00:05');
     });
 });
