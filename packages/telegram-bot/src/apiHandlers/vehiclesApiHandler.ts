@@ -1,7 +1,7 @@
 import { Context } from 'telegraf';
 import { fetchData } from '../utils/apiUtils';
 import { VehiclePosition } from '@cotral/shared';
-import { Emoji, bold, escapeHtml, divider, mapsLink } from '../utils/messageFormatting';
+import { Emoji, bold, escapeHtml, mapsLink } from '../utils/messageFormatting';
 import { logger } from '../utils/logger';
 
 type VehiclePositionResponse = VehiclePosition | VehiclePosition[];
@@ -10,6 +10,23 @@ export function normalizeVehiclePositionResponse(data: VehiclePositionResponse |
     if (!data) return null;
     if (Array.isArray(data)) return data[0] ?? null;
     return data;
+}
+
+export function formatVehiclePositionMessage(vehicleCode: string, data: VehiclePosition): string {
+    const lines: string[] = [
+        `${Emoji.GEAR} ${bold(`Veicolo ${escapeHtml(vehicleCode)}`)}`,
+        `${Emoji.CLOCK} <b>Ultimo aggiornamento:</b> ${data.time ? escapeHtml(data.time) : 'Non disponibile'}`,
+    ];
+
+    if (data.coordX?.length > 0 && data.coordY?.length > 0) {
+        const lastX = parseFloat(data.coordX[data.coordX.length - 1]);
+        const lastY = parseFloat(data.coordY[data.coordY.length - 1]);
+        if (!isNaN(lastX) && !isNaN(lastY) && !(lastX === 0 && lastY === 0)) {
+            lines.push(`${Emoji.MAP} ${mapsLink(lastX, lastY)}`);
+        }
+    }
+
+    return lines.join('\n');
 }
 
 export async function getVehicleRealTimePositions(ctx: Context, vehicleCode: string): Promise<void> {
@@ -28,11 +45,7 @@ export async function getVehicleRealTimePositions(ctx: Context, vehicleCode: str
             return;
         }
 
-        const lines: string[] = [
-            `${Emoji.GEAR} ${bold(`Veicolo ${escapeHtml(vehicleCode)}`)}`,
-            divider(),
-            `${Emoji.CLOCK} <b>Ultimo aggiornamento:</b> ${data.time ? escapeHtml(data.time) : 'Non disponibile'}`,
-        ];
+        const message = formatVehiclePositionMessage(vehicleCode, data);
 
         const keyboard: { text: string; callback_data: string }[][] = [];
 
@@ -40,7 +53,6 @@ export async function getVehicleRealTimePositions(ctx: Context, vehicleCode: str
             const lastX = parseFloat(data.coordX[data.coordX.length - 1]);
             const lastY = parseFloat(data.coordY[data.coordY.length - 1]);
             if (!isNaN(lastX) && !isNaN(lastY) && !(lastX === 0 && lastY === 0)) {
-                lines.push(`${Emoji.MAP} ${mapsLink(lastX, lastY)}`);
                 keyboard.push([{ text: `${Emoji.PIN} Mappa`, callback_data: `location:${lastX.toFixed(5)}:${lastY.toFixed(5)}` }]);
             }
         }
@@ -52,7 +64,7 @@ export async function getVehicleRealTimePositions(ctx: Context, vehicleCode: str
             { text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' },
         ]);
 
-        await ctx.reply(lines.join('\n'), {
+        await ctx.reply(message, {
             reply_markup: { inline_keyboard: keyboard },
             link_preview_options: { is_disabled: true },
         });
