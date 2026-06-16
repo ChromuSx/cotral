@@ -10,10 +10,14 @@ interface TransitsResponse {
     transits: Transit[];
 }
 
-function sortTransitsByDeparture(transits: Transit[]): Transit[] {
+export function getTransitDisplayTime(transit: Transit): string {
+    return transit.tempoTransito || transit.orarioPartenzaCorsa || '';
+}
+
+export function sortTransitsByDisplayTime(transits: Transit[]): Transit[] {
     return [...transits].sort((a, b) => {
-        const timeA = parseTime(a.orarioPartenzaCorsa);
-        const timeB = parseTime(b.orarioPartenzaCorsa);
+        const timeA = parseTime(getTransitDisplayTime(a));
+        const timeB = parseTime(getTransitDisplayTime(b));
         if (!timeA && !timeB) return 0;
         if (!timeA) return 1;
         if (!timeB) return -1;
@@ -21,10 +25,10 @@ function sortTransitsByDeparture(transits: Transit[]): Transit[] {
     });
 }
 
-function findNextDepartureIndex(transits: Transit[]): number {
+function findNextTransitIndex(transits: Transit[]): number {
     const now = new Date();
     for (let i = 0; i < transits.length; i++) {
-        const t = parseTime(transits[i].orarioPartenzaCorsa);
+        const t = parseTime(getTransitDisplayTime(transits[i]));
         if (t && t.getTime() >= now.getTime() - 60000) return i;
     }
     return -1;
@@ -36,9 +40,9 @@ function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName:
 
     let nextSummary = '';
     if (nextIdx >= 0) {
-        const nextTime = sorted[nextIdx].orarioPartenzaCorsa;
+        const nextTime = getTransitDisplayTime(sorted[nextIdx]);
         const rt = nextTime ? relativeTime(nextTime) : '';
-        nextSummary = rt ? `\n${Emoji.BUS} Prossimo: ${escapeHtml(nextTime)} ${rt}` : '';
+        nextSummary = rt ? `\n${Emoji.BUS} Prossimo alla palina: ${escapeHtml(nextTime)} ${rt}` : '';
     }
 
     const counts = realtimeCount > 0
@@ -57,9 +61,9 @@ function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName:
 
     for (let i = 0; i < Math.min(sorted.length, MAX_BUTTONS); i++) {
         const t = sorted[i];
-        const time = t.orarioPartenzaCorsa || '??:??';
+        const time = getTransitDisplayTime(t) || '??:??';
         const dest = t.arrivoCorsa || 'N/D';
-        const rel = t.orarioPartenzaCorsa ? relativeTime(t.orarioPartenzaCorsa) : '';
+        const rel = time !== '??:??' ? relativeTime(time) : '';
         const cleanRel = rel.replace(/<\/?[^>]+(>|$)/g, '');
         const isNext = i === nextIdx;
         const status = getTransitTrackingStatus(t);
@@ -103,8 +107,8 @@ export async function getTransitsByPoleCode(ctx: Context, poleCode: string): Pro
             return;
         }
 
-        const sorted = sortTransitsByDeparture(response.transits);
-        const nextIdx = findNextDepartureIndex(sorted);
+        const sorted = sortTransitsByDisplayTime(response.transits);
+        const nextIdx = findNextTransitIndex(sorted);
         const poleName = response.pole?.nomePalina ? escapeHtml(response.pole.nomePalina) : escapeHtml(poleCode);
         const msg = buildTransitSelectionList(sorted, nextIdx, poleName, poleCode);
 
@@ -141,8 +145,8 @@ export async function refreshTransitsByPoleCode(ctx: Context, poleCode: string):
             return;
         }
 
-        const sorted = sortTransitsByDeparture(response.transits);
-        const nextIdx = findNextDepartureIndex(sorted);
+        const sorted = sortTransitsByDisplayTime(response.transits);
+        const nextIdx = findNextTransitIndex(sorted);
         const poleName = response.pole?.nomePalina ? escapeHtml(response.pole.nomePalina) : escapeHtml(poleCode);
         const msg = buildTransitSelectionList(sorted, nextIdx, poleName, poleCode);
 
@@ -177,8 +181,8 @@ export async function showTransitDetail(ctx: Context, poleCode: string, index: n
             return;
         }
 
-        const sorted = sortTransitsByDeparture(response.transits);
-        const nextIdx = findNextDepartureIndex(sorted);
+        const sorted = sortTransitsByDisplayTime(response.transits);
+        const nextIdx = findNextTransitIndex(sorted);
         const transit = sorted[index];
         if (!transit) {
             await ctx.reply(`${Emoji.SEARCH} Transito non trovato. Potrebbe essere cambiato.`);
@@ -218,22 +222,22 @@ function formatTransitMessage(transit: Transit, isNext: boolean): string {
     const lines: string[] = [];
 
     if (isNext) {
-        lines.push(`\u{1F4A8} <b>PROSSIMA PARTENZA</b>`);
+        lines.push(`\u{1F4A8} <b>PROSSIMO TRANSITO ALLA PALINA</b>`);
     }
 
     lines.push(`${Emoji.BUS} ${bold(`${partenza} \u2192 ${arrivo}`)}`);
 
-    const orarioP = transit.orarioPartenzaCorsa;
+    const orarioTransito = getTransitDisplayTime(transit);
     const orarioA = transit.orarioArrivoCorsa;
-    if (orarioP || orarioA) {
-        const parti = orarioP ? escapeHtml(orarioP) : 'N/D';
+    if (orarioTransito || orarioA) {
+        const transito = orarioTransito ? escapeHtml(orarioTransito) : 'N/D';
         const arri = orarioA ? escapeHtml(orarioA) : 'N/D';
-        const rel = orarioP ? ` ${relativeTime(orarioP)}` : '';
-        lines.push(`${Emoji.CLOCK} Partenza: ${parti}${rel} | Arrivo: ${arri}`);
+        const rel = orarioTransito ? ` ${relativeTime(orarioTransito)}` : '';
+        lines.push(`${Emoji.CLOCK} Transito palina: ${transito}${rel} | Arrivo: ${arri}`);
     }
 
-    if (transit.tempoTransito) {
-        lines.push(`${Emoji.CLOCK} Durata: ${escapeHtml(transit.tempoTransito)}`);
+    if (transit.orarioPartenzaCorsa && transit.orarioPartenzaCorsa !== orarioTransito) {
+        lines.push(`${Emoji.CLOCK} Partenza corsa: ${escapeHtml(transit.orarioPartenzaCorsa)}`);
     }
 
     const status = getTransitTrackingStatus(transit);
