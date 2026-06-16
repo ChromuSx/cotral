@@ -6,15 +6,29 @@ import { handleGetFavoritePoles, PolesCommands } from '../../commands/polesComma
 import { ExtendedContext } from '../../interfaces/ExtendedContext';
 import { CallbackQuery, Update } from 'telegraf/typings/core/types/typegram';
 import { transitsMenu } from '../actions/transitsBotActions';
+import { logger } from '../../utils/logger';
 
-export async function handleCallbackQuery(ctx:  NarrowedContext<ExtendedContext, Update.CallbackQueryUpdate<CallbackQuery>>) {
-    if ('data' in ctx.callbackQuery) {
-        const callbackData = ctx.callbackQuery.data;
-        const parts = callbackData.split(':');
-        const [contextAction, action] = parts;
+const INVALID_CALLBACK_ALERT = '⚠️ Azione non più valida. Riprova dal menu.';
+const CALLBACK_ERROR_ALERT = '⚠️ Operazione non riuscita. Riprova.';
 
-        const userId = ctx.from?.id;
+async function answerInvalidCallback(ctx: NarrowedContext<ExtendedContext, Update.CallbackQueryUpdate<CallbackQuery>>): Promise<void> {
+    await ctx.answerCbQuery(INVALID_CALLBACK_ALERT, { show_alert: true });
+}
 
+function transitKeyFromParts(parts: string[], startIndex: number): string | undefined {
+    const key = parts.slice(startIndex).join(':');
+    return transitsApiHandler.isValidTransitCallbackKey(key) ? key : undefined;
+}
+
+export async function handleCallbackQuery(ctx: NarrowedContext<ExtendedContext, Update.CallbackQueryUpdate<CallbackQuery>>) {
+    if (!('data' in ctx.callbackQuery)) return;
+
+    const callbackData = ctx.callbackQuery.data;
+    const parts = callbackData.split(':');
+    const [contextAction, action] = parts;
+    const userId = ctx.from?.id;
+
+    try {
         // Handle favorite actions with toast feedback
         if (contextAction === 'poles' && (action === 'fav' || action === 'remove_favorite')) {
             if (action === 'fav' && userId && parts[2]) {
@@ -26,39 +40,68 @@ export async function handleCallbackQuery(ctx:  NarrowedContext<ExtendedContext,
                 await polesApiHandler.removeFavoritePole(ctx, parts[2], userId);
                 await ctx.answerCbQuery(`\u274C Rimossa dai preferiti`, { show_alert: false });
             } else {
-                await ctx.answerCbQuery();
+                await answerInvalidCallback(ctx);
             }
             return;
         }
 
-        await ctx.answerCbQuery();
-
-        if (contextAction === 'td' && parts[1] && parts[2] !== undefined) {
+        if (contextAction === 'td') {
             const poleCode = parts[1];
-            const index = parseInt(parts[2], 10);
-            if (!isNaN(index)) {
-                await transitsApiHandler.showTransitDetail(ctx, poleCode, index);
+            const transitKey = transitKeyFromParts(parts, 2);
+            if (!poleCode || !transitKey) {
+                await answerInvalidCallback(ctx);
+                return;
             }
-        } else if (contextAction === 'transits' && parts[2]) {
+            await ctx.answerCbQuery();
+            await transitsApiHandler.showTransitDetailByKey(ctx, poleCode, transitKey);
+            return;
+        }
+
+        if (contextAction === 'transits') {
+            if (!parts[2]) {
+                await answerInvalidCallback(ctx);
+                return;
+            }
+            await ctx.answerCbQuery();
             if (action === 'getTransits') {
                 await transitsApiHandler.getTransitsByPoleCode(ctx, parts[2]);
             } else if (action === 'refresh') {
                 await transitsApiHandler.refreshTransitsByPoleCode(ctx, parts[2]);
+            } else {
+                await answerInvalidCallback(ctx);
             }
-        } else if (contextAction === 'poles') {
+            return;
+        }
+
+        if (contextAction === 'poles') {
+            await ctx.answerCbQuery();
             if (action === PolesCommands.GetFavoritePoles) {
                 await handleGetFavoritePoles(ctx, userId);
+            } else {
+                await answerInvalidCallback(ctx);
             }
-        } else if (contextAction === 'vehicles' && parts[2]) {
-            if (action === 'getVehicleRealTimePositions') {
+            return;
+        }
+
+        if (contextAction === 'vehicles') {
+            await ctx.answerCbQuery();
+            if (action === 'getVehicleRealTimePositions' && parts[2]) {
                 await vehiclesApiHandler.getVehicleRealTimePositions(ctx, parts[2]);
-            } else if (action === 'fromTransit' && parts[3]) {
-                const index = parseInt(parts[3], 10);
-                if (!isNaN(index)) {
-                    await transitsApiHandler.showVehiclePositionForTransit(ctx, parts[2], index);
+            } else if (action === 'fromTransit' && parts[2]) {
+                const transitKey = transitKeyFromParts(parts, 3);
+                if (!transitKey) {
+                    await answerInvalidCallback(ctx);
+                    return;
                 }
+                await transitsApiHandler.showVehiclePositionForTransitByKey(ctx, parts[2], transitKey);
+            } else {
+                await answerInvalidCallback(ctx);
             }
-        } else if (contextAction === 'sel') {
+            return;
+        }
+
+        if (contextAction === 'sel') {
+            await ctx.answerCbQuery();
             if (action === 'pole' && parts[2]) {
                 await polesApiHandler.displaySinglePoleDetails(ctx, parts[2], userId);
             } else if (action === 'stop' && parts[2]) {
@@ -68,7 +111,6 @@ export async function handleCallbackQuery(ctx:  NarrowedContext<ExtendedContext,
                 const lines = [`\u{1F68F} <b>${stopName}</b>`, `\u25AA\uFE0F <b>Codice:</b> ${parts[2]}`];
 
                 const keyboard: { text: string; callback_data: string }[][] = [];
-                // Use the stop code to search transits (stop code = pole code in many cases)
                 keyboard.push([{ text: `\u{1F68C} Cerca transiti`, callback_data: `transits:getTransits:${parts[2]}` }]);
                 if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
                     keyboard.push([{ text: `\u{1F4CD} Mappa`, callback_data: `location:${lat.toFixed(5)}:${lon.toFixed(5)}` }]);
@@ -76,20 +118,38 @@ export async function handleCallbackQuery(ctx:  NarrowedContext<ExtendedContext,
                 keyboard.push([{ text: `\u{1F519} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
                 await ctx.reply(lines.join('\n'), { reply_markup: { inline_keyboard: keyboard } });
+            } else {
+                await answerInvalidCallback(ctx);
             }
-        } else if (contextAction === 'location' && parts[1] && parts[2]) {
-            const lat = parseFloat(parts[1]);
-            const lon = parseFloat(parts[2]);
-            if (!isNaN(lat) && !isNaN(lon)) {
-                await ctx.sendLocation(lat, lon);
+            return;
+        }
+
+        if (contextAction === 'location') {
+            const lat = parts[1] ? parseFloat(parts[1]) : NaN;
+            const lon = parts[2] ? parseFloat(parts[2]) : NaN;
+            if (isNaN(lat) || isNaN(lon)) {
+                await answerInvalidCallback(ctx);
+                return;
             }
-        } else if (contextAction === 'search') {
+            await ctx.answerCbQuery();
+            await ctx.sendLocation(lat, lon);
+            return;
+        }
+
+        if (contextAction === 'search') {
             if (action === 'arrdest' && parts[2] && parts[3]) {
+                await ctx.answerCbQuery();
                 const arrival = decodeURIComponent(parts[2]);
                 const destination = decodeURIComponent(parts[3]);
                 await polesApiHandler.getPoleByArrivalAndDestinationLocality(ctx, { arrival, destination });
+            } else {
+                await answerInvalidCallback(ctx);
             }
-        } else if (contextAction === 'nav') {
+            return;
+        }
+
+        if (contextAction === 'nav') {
+            await ctx.answerCbQuery();
             if (action === 'transits_menu') {
                 ctx.session.command = undefined;
                 await ctx.reply('\u{1F68C} <b>Transiti</b>\n\nCosa vuoi fare?', transitsMenu);
@@ -101,7 +161,17 @@ export async function handleCallbackQuery(ctx:  NarrowedContext<ExtendedContext,
                 ctx.session.command = undefined;
                 const { stopsMenu } = await import('../actions/stopsbotActions');
                 await ctx.reply('\u{1F68F} <b>Fermate</b>\n\nCosa vuoi fare?', stopsMenu);
+            } else {
+                await answerInvalidCallback(ctx);
             }
+            return;
         }
+
+        await answerInvalidCallback(ctx);
+    } catch (error) {
+        logger.error('Errore gestione callback Telegram', error, { callbackData });
+        try {
+            await ctx.answerCbQuery(CALLBACK_ERROR_ALERT, { show_alert: true });
+        } catch { /* ignore */ }
     }
 }

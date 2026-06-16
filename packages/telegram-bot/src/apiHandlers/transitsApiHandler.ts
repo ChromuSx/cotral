@@ -26,6 +26,36 @@ export function sortTransitsByDisplayTime(transits: Transit[]): Transit[] {
     });
 }
 
+function buildTransitCallbackKey(transit: Transit, fallbackIndex: number): string {
+    return transit.idCorsa ? `id:${encodeURIComponent(transit.idCorsa)}` : String(fallbackIndex);
+}
+
+export function buildTransitDetailCallbackData(poleCode: string, transit: Transit, fallbackIndex: number): string {
+    return `td:${poleCode}:${buildTransitCallbackKey(transit, fallbackIndex)}`;
+}
+
+export function buildVehiclePositionFromTransitCallbackData(poleCode: string, transit: Transit, fallbackIndex: number): string {
+    return `vehicles:fromTransit:${poleCode}:${buildTransitCallbackKey(transit, fallbackIndex)}`;
+}
+
+export function isValidTransitCallbackKey(key: string | undefined): key is string {
+    if (!key) return false;
+    if (/^\d+$/.test(key)) return true;
+    if (!key.startsWith('id:')) return false;
+    return key.slice(3).trim().length > 0;
+}
+
+export function resolveTransitByCallbackKey(transits: Transit[], key: string): Transit | undefined {
+    if (key.startsWith('id:')) {
+        const transitId = decodeURIComponent(key.slice(3));
+        return transits.find(transit => transit.idCorsa === transitId);
+    }
+
+    const index = parseInt(key, 10);
+    if (Number.isNaN(index)) return undefined;
+    return transits[index];
+}
+
 export function formatTransitDelayLabel(delay: string): string {
     const isAhead = delay.startsWith('-');
     const cleanDelay = isAhead ? delay.slice(1) : delay;
@@ -82,7 +112,7 @@ function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName:
         // Delay only when reliable (real-time tracking active)
         const delayMark = (status === 'realtime' && t.ritardo && t.ritardo !== '00:00') ? ` \u{1F6A8}${t.ritardo}` : '';
         const label = `${prefix}${time} \u2192 ${dest} ${cleanRel}${delayMark}`;
-        buttons.push([{ text: label, callback_data: `td:${poleCode}:${i}` }]);
+        buttons.push([{ text: label, callback_data: buildTransitDetailCallbackData(poleCode, t, i) }]);
     }
 
     buttons.push([
@@ -180,6 +210,10 @@ export async function refreshTransitsByPoleCode(ctx: Context, poleCode: string):
 }
 
 export async function showVehiclePositionForTransit(ctx: Context, poleCode: string, index: number): Promise<void> {
+    await showVehiclePositionForTransitByKey(ctx, poleCode, String(index));
+}
+
+export async function showVehiclePositionForTransitByKey(ctx: Context, poleCode: string, transitKey: string): Promise<void> {
     const apiUrl = `/transits/${encodeURIComponent(poleCode)}`;
 
     try {
@@ -191,21 +225,21 @@ export async function showVehiclePositionForTransit(ctx: Context, poleCode: stri
         }
 
         const sorted = sortTransitsByDisplayTime(response.transits);
-        const transit = sorted[index];
+        const transit = resolveTransitByCallbackKey(sorted, transitKey);
         const vehicleCode = transit?.automezzo?.codice;
         if (!transit || !vehicleCode) {
             await ctx.reply(`${Emoji.SEARCH} Posizione veicolo non disponibile per questo transito.`);
             return;
         }
 
-        await getVehicleRealTimePositions(ctx, vehicleCode, buildVehiclePositionContext(transit, poleCode, index));
+        await getVehicleRealTimePositions(ctx, vehicleCode, buildVehiclePositionContext(transit, poleCode, transitKey));
     } catch (error) {
-        logger.error('Errore posizione veicolo da transito', error, { poleCode, index });
+        logger.error('Errore posizione veicolo da transito', error, { poleCode, transitKey });
         await ctx.reply(`${Emoji.WARNING} Errore nel recupero della posizione.`);
     }
 }
 
-function buildVehiclePositionContext(transit: Transit, poleCode: string, index: number): VehiclePositionContext {
+function buildVehiclePositionContext(transit: Transit, poleCode: string, transitKey: string): VehiclePositionContext {
     const partenza = transit.partenzaCorsa || 'N/D';
     const arrivo = transit.arrivoCorsa || 'N/D';
     const status = getTransitTrackingStatus(transit);
@@ -223,42 +257,47 @@ function buildVehiclePositionContext(transit: Transit, poleCode: string, index: 
             : status === 'monitored_offline'
                 ? 'tracciata, bus non in trasmissione'
                 : 'schedulata, no real-time',
-        refreshCallbackData: `vehicles:fromTransit:${poleCode}:${index}`,
+        refreshCallbackData: `vehicles:fromTransit:${poleCode}:${transitKey}`,
     };
 }
 
 export async function showTransitDetail(ctx: Context, poleCode: string, index: number): Promise<void> {
+    await showTransitDetailByKey(ctx, poleCode, String(index));
+}
+
+export async function showTransitDetailByKey(ctx: Context, poleCode: string, transitKey: string): Promise<void> {
     const apiUrl = `/transits/${encodeURIComponent(poleCode)}`;
 
     try {
         await ctx.sendChatAction('typing');
         const response = await fetchData<TransitsResponse>(apiUrl);
         if (!response?.transits?.length) {
-            await ctx.reply(`${Emoji.SEARCH} Transito non pi\u00f9 disponibile.`);
+            await ctx.reply(`${Emoji.SEARCH} Transito non più disponibile.`);
             return;
         }
 
         const sorted = sortTransitsByDisplayTime(response.transits);
         const nextIdx = findNextTransitIndex(sorted);
-        const transit = sorted[index];
+        const transit = resolveTransitByCallbackKey(sorted, transitKey);
         if (!transit) {
             await ctx.reply(`${Emoji.SEARCH} Transito non trovato. Potrebbe essere cambiato.`);
             return;
         }
 
-        const isNext = index === nextIdx;
+        const transitIndex = sorted.indexOf(transit);
+        const isNext = transitIndex === nextIdx;
         const message = formatTransitMessage(transit, isNext);
 
         const keyboard: { text: string; callback_data: string }[][] = [];
         if (transit.automezzo?.codice) {
             keyboard.push([{
                 text: `${Emoji.GEAR} Posizione veicolo`,
-                callback_data: `vehicles:fromTransit:${poleCode}:${index}`
+                callback_data: buildVehiclePositionFromTransitCallbackData(poleCode, transit, transitIndex)
             }]);
         }
         keyboard.push([
             { text: `${Emoji.BACK} Torna alla lista`, callback_data: `transits:getTransits:${poleCode}` },
-            { text: `\u{1F504} Aggiorna`, callback_data: `td:${poleCode}:${index}` },
+            { text: `\u{1F504} Aggiorna`, callback_data: buildTransitDetailCallbackData(poleCode, transit, transitIndex) },
         ]);
 
         await ctx.reply(message, {
@@ -266,7 +305,7 @@ export async function showTransitDetail(ctx: Context, poleCode: string, index: n
             link_preview_options: { is_disabled: true },
         });
     } catch (error) {
-        logger.error('Errore dettaglio transito', error, { poleCode, index });
+        logger.error('Errore dettaglio transito', error, { poleCode, transitKey });
         await ctx.reply(`${Emoji.WARNING} Errore nel recupero dei dettagli.`);
     }
 }
