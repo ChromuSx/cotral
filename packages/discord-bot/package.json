@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "tsc && node dist/app.js",
     "deploy-commands": "tsc && node dist/bot/deploy-commands.js",
-    "test": "vitest run"
+    "test": "vitest run src"
   },
   "dependencies": {
     "@cotral/shared": "1.0.0",
@@ -18,6 +18,6 @@
   "devDependencies": {
     "@types/node": "^20.8.10",
     "typescript": "^5.4.4",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.9"
   }
 }

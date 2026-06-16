@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "tsc && node dist/app.js",
-    "test": "vitest run"
+    "test": "vitest run src"
   },
   "dependencies": {
     "@cotral/shared": "1.0.0",
@@ -14,15 +14,15 @@
     "axios": "^1.6.7",
     "better-sqlite3": "^11.0.0",
     "dotenv": "^16.3.1",
-    "fastify": "^4.26.2",
+    "fastify": "^5.8.5",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.5",
-    "@types/node": "^20.8.10",
     "@types/better-sqlite3": "^7.6.9",
+    "@types/node": "^20.8.10",
     "@types/xml2js": "^0.4.14",
     "typescript": "^5.4.4",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.9"
   }
 }
