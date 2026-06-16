@@ -25,6 +25,14 @@ export function sortTransitsByDisplayTime(transits: Transit[]): Transit[] {
     });
 }
 
+export function formatTransitDelayLabel(delay: string): string {
+    const isAhead = delay.startsWith('-');
+    const cleanDelay = isAhead ? delay.slice(1) : delay;
+    return isAhead
+        ? `Stima Cotral: anticipo ${cleanDelay}`
+        : `Stima Cotral: ritardo ${cleanDelay}`;
+}
+
 function findNextTransitIndex(transits: Transit[]): number {
     const now = new Date();
     for (let i = 0; i < transits.length; i++) {
@@ -243,9 +251,8 @@ function formatTransitMessage(transit: Transit, isNext: boolean): string {
     const status = getTransitTrackingStatus(transit);
     if (status === 'realtime') {
         if (transit.ritardo && transit.ritardo !== '00:00') {
-            const isAhead = transit.ritardo.startsWith('-');
-            const label = isAhead ? `Anticipo: ${escapeHtml(transit.ritardo.slice(1))}` : `Ritardo: ${escapeHtml(transit.ritardo)}`;
-            lines.push(`${Emoji.GREEN} <b>Real-time</b> \u00b7 ${Emoji.DELAY} <b>${label}</b>`);
+            const label = formatTransitDelayLabel(transit.ritardo);
+            lines.push(`${Emoji.GREEN} <b>Real-time</b> \u00b7 ${Emoji.DELAY} <b>${escapeHtml(label)}</b>`);
         } else {
             lines.push(`${Emoji.GREEN} <b>Real-time \u00b7 puntuale</b>`);
         }

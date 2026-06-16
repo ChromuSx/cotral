@@ -58,7 +58,7 @@ function buildStopSelectMenu(stops: Stop[]): ActionRowBuilder<StringSelectMenuBu
 
 export async function getStopsByLocality(interaction: Interaction, locality: string) {
     try {
-        const { data: stops } = await api.get<Stop[]>(`/stops/locality/${encodeURIComponent(locality)}`);
+        const { data: stops } = await api.get<Stop[]>(`/stops/${encodeURIComponent(locality)}`);
 
         if (!stops?.length) {
             await interaction.editReply({ embeds: [errorEmbed('Nessuna fermata trovata.')] });
@@ -83,7 +83,7 @@ export async function getStopsByLocality(interaction: Interaction, locality: str
 
 export async function getFirstStopByLocality(interaction: Interaction, locality: string) {
     try {
-        const { data: stop } = await api.get<Stop>(`/stops/locality/${encodeURIComponent(locality)}/first`);
+        const { data: stop } = await api.get<Stop>(`/stops/firststop/${encodeURIComponent(locality)}`);
 
         if (!stop) {
             await interaction.editReply({ embeds: [errorEmbed('Nessuna fermata trovata.')] });

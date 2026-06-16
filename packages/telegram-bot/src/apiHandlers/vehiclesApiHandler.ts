@@ -4,12 +4,21 @@ import { VehiclePosition } from '@cotral/shared';
 import { Emoji, bold, escapeHtml, divider, mapsLink } from '../utils/messageFormatting';
 import { logger } from '../utils/logger';
 
+type VehiclePositionResponse = VehiclePosition | VehiclePosition[];
+
+export function normalizeVehiclePositionResponse(data: VehiclePositionResponse | null): VehiclePosition | null {
+    if (!data) return null;
+    if (Array.isArray(data)) return data[0] ?? null;
+    return data;
+}
+
 export async function getVehicleRealTimePositions(ctx: Context, vehicleCode: string): Promise<void> {
     const apiUrl = `/vehiclerealtimepositions/${encodeURIComponent(vehicleCode)}`;
 
     try {
         await ctx.sendChatAction('typing');
-        const data = await fetchData<VehiclePosition>(apiUrl);
+        const response = await fetchData<VehiclePositionResponse>(apiUrl);
+        const data = normalizeVehiclePositionResponse(response);
 
         if (!data) {
             await ctx.reply(

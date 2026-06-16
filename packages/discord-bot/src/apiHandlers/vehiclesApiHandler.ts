@@ -12,7 +12,7 @@ type Interaction = CommandInteraction | MessageComponentInteraction;
 export async function getVehiclePositions(interaction: Interaction, vehicleCode: string) {
     try {
         const { data: position } = await api.get<VehiclePosition>(
-            `/vehicles/${encodeURIComponent(vehicleCode)}`,
+            `/vehiclerealtimepositions/${encodeURIComponent(vehicleCode)}`,
         );
 
         if (!position?.coordX?.length || !position?.coordY?.length) {
