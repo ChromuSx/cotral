@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-build-audit:
+    name: Test, build and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package for workspace imports
+        run: npm run build:shared
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build workspaces
+        run: npm run build
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+  docker-build:
+    name: Docker build (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test-build-audit
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - server
+          - telegram-bot
+          - discord-bot
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker target
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: false
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
