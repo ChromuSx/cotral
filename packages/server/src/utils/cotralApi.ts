@@ -7,7 +7,21 @@ export async function fetchCotralXml(
     params: Record<string, unknown>
 ): Promise<Record<string, any>> {
     const response = await axios.get(`${config.cotral.baseURL}/${endpoint}`, { params, timeout: 15000 });
-    return parseStringPromise(response.data);
+    return parseCotralXmlResponse(response.data);
+}
+
+export async function parseCotralXmlResponse(data: unknown): Promise<Record<string, any>> {
+    const xml = typeof data === 'string' ? data : String(data ?? '');
+    const trimmedXml = xml.trim();
+
+    // Cotral sometimes returns only a dangling closing tag for unknown/no-data
+    // transit queries (for example: "</transiti>"). Treat it as an empty
+    // result so callers can return their normal no-data payload instead of 500.
+    if (!trimmedXml || /^<\/[A-Za-z][\w:.-]*>$/.test(trimmedXml)) {
+        return {};
+    }
+
+    return parseStringPromise(xml);
 }
 
 export function extractArray(parsed: Record<string, any>, ...path: string[]): any[] {

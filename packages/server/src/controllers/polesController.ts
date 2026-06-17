@@ -1,6 +1,11 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { PolesService } from '../services/polesService';
 
+export const MAX_POLE_SEARCH_RANGE = 0.1;
+export const isValidPoleSearchRange = (range: number): boolean => (
+    Number.isFinite(range) && range > 0 && range <= MAX_POLE_SEARCH_RANGE
+);
+
 export class PolesController {
     private polesService: PolesService;
 
@@ -54,6 +59,11 @@ export class PolesController {
 
         if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
             reply.status(400).send({ error: 'Coordinate fuori range (lat: -90/90, lon: -180/180)' });
+            return;
+        }
+
+        if (range !== undefined && !isValidPoleSearchRange(range)) {
+            reply.status(400).send({ error: `Il parametro "range" deve essere maggiore di 0 e non superiore a ${MAX_POLE_SEARCH_RANGE}` });
             return;
         }
 
