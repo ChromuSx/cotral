@@ -52,6 +52,7 @@ export const sessionActions: Record<string, (ctx: ExtendedContext, text: string,
         }
     },
     [PolesCommands.GetAllPolesDestinationsByArrival]: async (ctx, text) => { await polesApiHandler.getAllPolesDestinationsByArrivalLocality(ctx, text); await restoreMainKeyboard(ctx); },
+    [PolesCommands.SearchPolesByDescription]: async (ctx, text) => { await polesApiHandler.getPolesByDescription(ctx, text); await restoreMainKeyboard(ctx); },
     [StopsCommands.GetStopsByLocality]: async (ctx, text) => { await stopsApiHandler.getStopsByLocality(ctx, text); await restoreMainKeyboard(ctx); },
     [StopsCommands.GetFirstStopByLocality]: async (ctx, text) => { await stopsApiHandler.getFirstStopByLocality(ctx, text); await restoreMainKeyboard(ctx); },
     [TransitsCommands.GetTransitsByPoleCode]: async (ctx, text) => { await transitsApiHandler.getTransitsByPoleCode(ctx, text); await restoreMainKeyboard(ctx); },

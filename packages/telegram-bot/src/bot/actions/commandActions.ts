@@ -28,6 +28,7 @@ const handleGetTransitsMenu: ActionFunction = async ctx => { clearSession(ctx); 
 const handleGetVehiclesMenu: ActionFunction = async ctx => { clearSession(ctx); await ctx.reply('\u2699\uFE0F <b>Veicoli</b>\n\nCosa vuoi fare?', vehiclesMenu); };
 
 export const handleGetPolesByCode: ActionFunction = async ctx => await promptForInput(ctx, '\u{1F50D} Inserisci il <b>codice della palina</b>:\n\n<i>Esempio: 30125</i>', PolesCommands.GetPolesByCode);
+export const handleSearchPolesByDescription: ActionFunction = async ctx => await promptForInput(ctx, '🔎 Inserisci <b>nome fermata, località o punto di interesse</b>:\n\n<i>Esempio: Anagnina, Laurentina, Tivoli...</i>', PolesCommands.SearchPolesByDescription);
 
 export const handleGetPolesByPosition: ActionFunction = async ctx => {
     ctx.session.command = PolesCommands.GetPolesByPosition;
@@ -68,6 +69,8 @@ export const commandActions: Record<string, ActionFunction> = {
     // Poles sub-menu buttons + slash commands
     [`${PolesCommands.GetPolesByCodeFromMenu}`]: handleGetPolesByCode,
     [`/${PolesCommands.GetPolesByCode}`]: handleGetPolesByCode,
+    [`${PolesCommands.SearchPolesByDescriptionFromMenu}`]: handleSearchPolesByDescription,
+    [`/${PolesCommands.SearchPolesByDescription}`]: handleSearchPolesByDescription,
     [`${PolesCommands.GetPolesByPositionFromMenu}`]: handleGetPolesByPosition,
     [`/${PolesCommands.GetPolesByPosition}`]: handleGetPolesByPosition,
     [`${PolesCommands.GetPoleByArrivalAndDestinationFromMenu}`]: handleGetPoleByArrivalAndDestination,

@@ -7,6 +7,8 @@ export enum PolesCommands {
     GetFavoritePoles = 'getfavoritepoles',
     GetPolesByCodeFromMenu = '\u{1F50D} Cerca per codice',
     GetPolesByCode = 'getpolesbycode',
+    SearchPolesByDescriptionFromMenu = '🔎 Cerca per nome',
+    SearchPolesByDescription = 'searchpolesbydescription',
     GetPolesByPositionFromMenu = '\u{1F4CD} Cerca vicino a me',
     GetPolesByPosition = 'getpolesbyposition',
     GetPoleByArrivalAndDestinationFromMenu = '\u{1F9ED} Arrivo e destinazione',

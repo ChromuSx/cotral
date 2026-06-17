@@ -20,6 +20,21 @@ export async function getPolesByPosition(ctx: ExtendedContext, params: { latitud
     await handlePolesAsSelection(ctx, apiUrl, `${Emoji.PIN} <b>Paline vicino a te:</b>`);
 }
 
+export function buildPoleDescriptionSearchUrl(input: string): string | null {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    return `/app/stops/search?input=${encodeURIComponent(trimmed)}`;
+}
+
+export async function getPolesByDescription(ctx: Context, input: string): Promise<void> {
+    const apiUrl = buildPoleDescriptionSearchUrl(input);
+    if (!apiUrl) {
+        await ctx.reply(`${Emoji.WARNING} Per favore, inserisci un nome o una località da cercare.`);
+        return;
+    }
+    await handlePolesAsSelection(ctx, apiUrl, `${Emoji.SEARCH} <b>Paline trovate per “${escapeHtml(input.trim())}”:</b>`);
+}
+
 export async function getPoleByArrivalAndDestinationLocality(ctx: Context, params: { arrival: string, destination: string }): Promise<void> {
     const apiUrl = `/poles/${encodeURIComponent(params.arrival)}/${encodeURIComponent(params.destination)}`;
     await handlePolesAsSelection(ctx, apiUrl, `${Emoji.COMPASS} <b>Paline ${escapeHtml(params.arrival)} \u2192 ${escapeHtml(params.destination)}:</b>`);

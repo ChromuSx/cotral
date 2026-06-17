@@ -12,6 +12,7 @@ import {
 
 export const polesMenu = Markup.keyboard([
     [PolesCommands.GetFavoritePolesFromMenu, PolesCommands.GetPolesByCodeFromMenu],
+    [PolesCommands.SearchPolesByDescriptionFromMenu],
     [PolesCommands.GetPolesByPositionFromMenu],
     [PolesCommands.GetPoleByArrivalAndDestinationFromMenu],
     [PolesCommands.GetAllPolesDestinationsByArrivalFromMenu],
