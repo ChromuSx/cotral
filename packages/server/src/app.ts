@@ -3,6 +3,7 @@ import { registerStopsRoutes } from './routes/stopsRoutes';
 import { registerPolesRoutes } from './routes/polesRoutes';
 import { registerTransitsRoutes } from './routes/transitsRoutes';
 import { registerVehiclesRoutes } from './routes/vehiclesRoutes';
+import { registerCotralAppRoutes } from './routes/cotralAppRoutes';
 import { config } from './config';
 import { initDatabase } from './database';
 import { loadGtfs } from './services/gtfsService';
@@ -19,6 +20,7 @@ const createApp = async (): Promise<FastifyInstance> => {
     registerPolesRoutes(app);
     registerTransitsRoutes(app);
     registerVehiclesRoutes(app);
+    registerCotralAppRoutes(app);
 
     return app;
 };

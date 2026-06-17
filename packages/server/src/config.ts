@@ -19,4 +19,7 @@ export const config = {
         userId: process.env.COTRAL_USER_ID || '1BB73DCDAFA007572FC51E7407AB497C',
         delta: process.env.COTRAL_DELTA || '261',
     },
+    cotralApp: {
+        baseURL: process.env.COTRAL_APP_API_BASE || 'https://servizi.cotralspa.it:4444',
+    },
 };
