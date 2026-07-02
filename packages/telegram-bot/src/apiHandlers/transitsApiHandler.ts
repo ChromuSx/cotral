@@ -73,6 +73,63 @@ function findNextTransitIndex(transits: Transit[]): number {
     return -1;
 }
 
+export function compactTransitDestination(destination: string | null | undefined): string {
+    if (!destination) return 'N/D';
+
+    const withoutCode = cleanTransitEndpoint(destination);
+    const [localityRaw, detailRaw] = withoutCode.split('|').map(part => part.trim());
+    const locality = localityRaw || withoutCode;
+    const detail = detailRaw
+        ?.replace(/Stazione\s+FS/ig, 'Staz. FS')
+        .replace(/\bMetro\b/ig, 'M.')
+        .replace(/\s*\([^)]*\)\s*/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const compact = detail ? `${locality} ${detail}` : locality;
+    return compact.length > 24 ? locality : compact;
+}
+
+export function cleanTransitEndpoint(value: string | null | undefined): string {
+    if (!value) return 'N/D';
+    return value
+        .replace(/\s*\((?:f\d+|\d+)\)\s*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+export function formatTransitButtonLabel(transit: Transit, isNext: boolean): string {
+    const prefix = isNext ? '💨 ' : '';
+    return `${prefix}${getTransitDisplayTime(transit) || '??:??'}`;
+}
+
+export function formatTransitSelectionLine(transit: Transit, index: number, isNext: boolean): string {
+    const time = getTransitDisplayTime(transit) || '??:??';
+    const rel = time !== '??:??' ? ` ${relativeTime(time)}` : '';
+    const destination = cleanTransitEndpoint(transit.arrivoCorsa);
+    const status = getTransitTrackingStatus(transit);
+    const vehicle = transit.automezzo?.codice ? ` · mezzo ${escapeHtml(transit.automezzo.codice)}` : '';
+    const next = isNext ? '💨 ' : '';
+    let statusLine: string;
+
+    if (status === 'realtime') {
+        const delay = transit.ritardo && transit.ritardo !== '00:00'
+            ? ` · ${escapeHtml(formatTransitDelayLabel(transit.ritardo))}`
+            : ' · puntuale';
+        statusLine = `${Emoji.GREEN} Real-time${delay}${vehicle}`;
+    } else if (status === 'monitored_offline') {
+        statusLine = `🟡 Tracciata, bus non in trasmissione${vehicle}`;
+    } else {
+        statusLine = `⚪ Schedulata, no real-time${vehicle}`;
+    }
+
+    return [
+        `${index + 1}. ${next}<b>${escapeHtml(time)}</b>${rel}`,
+        `   → ${escapeHtml(destination)}`,
+        `   ${statusLine}`,
+    ].join('\n');
+}
+
 function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName: string, poleCode: string) {
     const realtimeCount = sorted.filter(t => getTransitTrackingStatus(t) === 'realtime').length;
     const scheduledCount = sorted.length - realtimeCount;
@@ -88,31 +145,25 @@ function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName:
         ? `${sorted.length} cors${sorted.length === 1 ? 'a' : 'e'} (${realtimeCount} real-time, ${scheduledCount} schedulat${scheduledCount === 1 ? 'a' : 'e'})`
         : `${sorted.length} cors${sorted.length === 1 ? 'a' : 'e'} schedulat${sorted.length === 1 ? 'a' : 'e'}`;
 
+    const buttons: { text: string; callback_data: string }[][] = [];
+    const MAX_BUTTONS = 15;
+    const shown = sorted.slice(0, MAX_BUTTONS);
+    const listLines = shown.map((transit, i) => formatTransitSelectionLine(transit, i, i === nextIdx));
+
     const header = [
         `${Emoji.BUSSTOP} <b>Transiti per: ${poleName}</b>`,
         `${Emoji.CLOCK} Aggiornato alle ${nowTimestamp()} \u2014 ${counts}${nextSummary}`,
         '',
-        '<i>Seleziona un transito per i dettagli:</i>',
+        ...listLines,
+        '',
+        '<i>Tocca il numero del transito per aprire i dettagli:</i>',
     ].join('\n');
 
-    const buttons: { text: string; callback_data: string }[][] = [];
-    const MAX_BUTTONS = 15;
-
-    for (let i = 0; i < Math.min(sorted.length, MAX_BUTTONS); i++) {
-        const t = sorted[i];
-        const time = getTransitDisplayTime(t) || '??:??';
-        const dest = t.arrivoCorsa || 'N/D';
-        const rel = time !== '??:??' ? relativeTime(time) : '';
-        const cleanRel = rel.replace(/<\/?[^>]+(>|$)/g, '');
-        const isNext = i === nextIdx;
-        const status = getTransitTrackingStatus(t);
-        // Status glyph: \u25cf real-time, \u25d0 monitored offline, \u25cb scheduled
-        const statusGlyph = status === 'realtime' ? '\u25cf' : status === 'monitored_offline' ? '\u25d0' : '\u25cb';
-        const prefix = isNext ? `\u{1F4A8}${statusGlyph} ` : `${statusGlyph} `;
-        // Delay only when reliable (real-time tracking active)
-        const delayMark = (status === 'realtime' && t.ritardo && t.ritardo !== '00:00') ? ` \u{1F6A8}${t.ritardo}` : '';
-        const label = `${prefix}${time} \u2192 ${dest} ${cleanRel}${delayMark}`;
-        buttons.push([{ text: label, callback_data: buildTransitDetailCallbackData(poleCode, t, i) }]);
+    for (const row of chunkArray(shown, 5)) {
+        buttons.push(row.map((t) => {
+            const i = shown.indexOf(t);
+            return { text: String(i + 1), callback_data: buildTransitDetailCallbackData(poleCode, t, i) };
+        }));
     }
 
     buttons.push([

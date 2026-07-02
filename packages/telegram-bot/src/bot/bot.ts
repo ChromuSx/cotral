@@ -15,9 +15,10 @@ import { VehiclesCommands } from '../commands/vehiclesCommands';
 import { handleCommand } from './handlers/commandHandler';
 import { handleCallbackQuery } from './handlers/callbackQueryHandler';
 import { handleLocation } from './handlers/locationHandler';
-import { getFavoritePolesButtons } from '../apiHandlers/polesApiHandler';
+import { fetchFavoritePoles, formatPoleSelectionLine } from '../apiHandlers/polesApiHandler';
 import { logger } from '../utils/logger';
 import { Emoji, greetingByTime } from '../utils/messageFormatting';
+import { chunkArray } from '../utils/functions';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -147,17 +148,24 @@ bot.action('MAIN_MENU', async ctx => {
 
 export async function mainMenu(ctx: ExtendedContext) {
     await ctx.sendChatAction('typing');
-    const favoritePolesButtons = await getFavoritePolesButtons(ctx);
-
-    const favoritePolesInlineKeyboard = Markup.inlineKeyboard(
-        favoritePolesButtons.map(button => Markup.button.callback(button.text, button.callback_data)),
-        { columns: 1 }
-    );
+    const favoritePoles = ctx.from?.id ? await fetchFavoritePoles(ctx.from.id) : [];
 
     await ctx.reply(buildWelcomeMessage(), Markup.keyboard(mainMenuButtons).resize());
 
-    if (favoritePolesButtons.length > 0) {
-        await ctx.reply(`${Emoji.STAR} <b>Le tue paline preferite:</b>`, favoritePolesInlineKeyboard);
+    if (favoritePoles.length > 0) {
+        const selectable = favoritePoles.filter(pole => pole.codicePalina);
+        const inlineKeyboard: { text: string; callback_data: string }[][] = [];
+        for (const row of chunkArray(selectable, 5)) {
+            inlineKeyboard.push(row.map(pole => {
+                const idx = selectable.indexOf(pole);
+                return { text: String(idx + 1), callback_data: `sel:pole:${pole.codicePalina}` };
+            }));
+        }
+        const list = selectable.map(formatPoleSelectionLine).join('\n');
+        await ctx.reply(
+            `${Emoji.STAR} <b>Le tue paline preferite:</b>\n\n${list}\n\n<i>Tocca il numero della palina per i dettagli:</i>`,
+            { reply_markup: { inline_keyboard: inlineKeyboard } }
+        );
     } else {
         await ctx.reply(
             `${Emoji.STAR} <i>Non hai ancora paline preferite.\nCerca una palina e premi </i>${Emoji.STAR} Preferito<i> per aggiungerla qui!</i>`

@@ -1,11 +1,11 @@
-import { Context, Markup } from 'telegraf';
+import { Context } from 'telegraf';
 import { Pole } from '@cotral/shared';
 import { ExtendedContext } from '../interfaces/ExtendedContext';
 import { fetchData, handleApiResponse } from '../utils/apiUtils';
 import { logger } from '../utils/logger';
 import api from '../services/axiosService';
 import { Emoji, bold, escapeHtml, divider, mapsLink, resultCountHeader } from '../utils/messageFormatting';
-import { convertAndValidateCoords } from '../utils/functions';
+import { chunkArray, convertAndValidateCoords } from '../utils/functions';
 
 export async function getPolesByCode(ctx: Context, code: string, params: { userId?: number | undefined }): Promise<void> {
     const { userId } = params;
@@ -55,13 +55,19 @@ export async function getAllPolesDestinationsByArrivalLocality(ctx: Context, arr
 
         const MAX = 20;
         const shown = destinations.slice(0, MAX);
-        const buttons: { text: string; callback_data: string }[][] = shown.map(dest => {
-            const cb = `search:arrdest:${encodeURIComponent(arrivalLocality).slice(0, 20)}:${encodeURIComponent(dest).slice(0, 20)}`;
-            return [{ text: `${Emoji.COMPASS} ${dest}`, callback_data: cb }];
-        });
+        const buttons: { text: string; callback_data: string }[][] = [];
+        for (const row of chunkArray(shown, 5)) {
+            buttons.push(row.map(dest => {
+                const idx = shown.indexOf(dest);
+                const cb = `search:arrdest:${encodeURIComponent(arrivalLocality).slice(0, 20)}:${encodeURIComponent(dest).slice(0, 20)}`;
+                return { text: String(idx + 1), callback_data: cb };
+            }));
+        }
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
-        const header = `${Emoji.COMPASS} <b>Destinazioni da ${bold(arrivalLocality)}</b> (${destinations.length})\n\n<i>Seleziona una destinazione per cercare le paline:</i>`;
+        const list = shown.map((dest, idx) => `${idx + 1}. ${Emoji.COMPASS} ${escapeHtml(dest)}`).join('\n');
+        const capped = destinations.length > MAX ? ` (prime ${MAX})` : '';
+        const header = `${Emoji.COMPASS} <b>Destinazioni da ${bold(arrivalLocality)}</b> (${destinations.length})${capped}\n\n${list}\n\n<i>Tocca il numero della destinazione per cercare le paline:</i>`;
         await ctx.reply(header, { reply_markup: { inline_keyboard: buttons } });
     } catch (error) {
         logger.error('Errore recupero destinazioni', error);
@@ -91,18 +97,20 @@ async function handlePolesAsSelection(ctx: Context, apiUrl: string, title: strin
 
         const MAX_BUTTONS = 15;
         const shown = poles.slice(0, MAX_BUTTONS);
-        const buttons: { text: string; callback_data: string }[][] = shown.map(pole => {
-            const name = pole.nomePalina ?? 'Palina';
-            const dist = pole.distanza ? ` \u2022 ${pole.distanza}` : '';
-            const label = `${Emoji.BUSSTOP} ${name} (${pole.codicePalina ?? '?'})${dist}`;
-            return [{ text: label, callback_data: `sel:pole:${pole.codicePalina ?? ''}` }];
-        });
+        const buttons: { text: string; callback_data: string }[][] = [];
+        for (const row of chunkArray(shown, 5)) {
+            buttons.push(row.map(pole => {
+                const idx = shown.indexOf(pole);
+                return { text: String(idx + 1), callback_data: `sel:pole:${pole.codicePalina ?? ''}` };
+            }));
+        }
 
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
+        const list = shown.map(formatPoleSelectionLine).join('\n');
         const header = poles.length > MAX_BUTTONS
-            ? `${title}\n${resultCountHeader(poles.length, 'paline')} (prime ${MAX_BUTTONS})\n\n<i>Seleziona una palina per vedere i dettagli:</i>`
-            : `${title}\n${resultCountHeader(poles.length, 'paline')}\n\n<i>Seleziona una palina per vedere i dettagli:</i>`;
+            ? `${title}\n${resultCountHeader(poles.length, 'paline')} (prime ${MAX_BUTTONS})\n\n${list}\n\n<i>Tocca il numero della palina per vedere i dettagli:</i>`
+            : `${title}\n${resultCountHeader(poles.length, 'paline')}\n\n${list}\n\n<i>Tocca il numero della palina per vedere i dettagli:</i>`;
 
         await ctx.reply(header, { reply_markup: { inline_keyboard: buttons } });
     } catch (error) {
@@ -161,26 +169,17 @@ export async function displaySinglePoleDetails(ctx: Context, poleCode: string, u
     }
 }
 
-function formatFavoritePoleLabel(pole: Pole): string {
+export function formatPoleSelectionLine(pole: Pole, index: number): string {
     const name = pole.nomePalina ?? 'Palina';
-    const dests = pole.destinazioni ?? [];
-    if (dests.length === 0) {
-        return `${Emoji.BUSSTOP} ${name} (${pole.codicePalina})`;
-    }
-    const extra = dests.length > 1 ? ` +${dests.length - 1}` : '';
-    return `${Emoji.BUSSTOP} ${name} → ${dests[0]}${extra}`;
-}
+    const code = pole.codicePalina ? ` · codice ${pole.codicePalina}` : '';
+    const dist = pole.distanza ? ` · ${pole.distanza}` : '';
+    const luogo = [pole.localita, pole.comune].filter(Boolean).join(', ');
+    const destinations = pole.destinazioni && pole.destinazioni.length > 0
+        ? `\n   ${Emoji.COMPASS} ${pole.destinazioni.map(d => escapeHtml(d)).join(' • ')}`
+        : '';
+    const place = luogo ? `\n   ${Emoji.PIN} ${escapeHtml(luogo)}` : '';
 
-export async function getFavoritePolesButtons(ctx: ExtendedContext) {
-    const userId = ctx.from?.id;
-    if (!userId) return [];
-
-    const favoritePoles = await fetchFavoritePoles(userId);
-    return favoritePoles.flatMap(item =>
-        item.codicePalina
-            ? [Markup.button.callback(formatFavoritePoleLabel(item), `sel:pole:${item.codicePalina}`)]
-            : []
-    );
+    return `${index + 1}. ${Emoji.BUSSTOP} <b>${escapeHtml(name)}</b>${escapeHtml(code)}${escapeHtml(dist)}${place}${destinations}`;
 }
 
 export async function fetchFavoritePoles(userId: number): Promise<Pole[]> {
@@ -205,16 +204,18 @@ export async function displayFavoritePoles(ctx: Context, userId: number): Promis
         }
 
         const buttons: { text: string; callback_data: string }[][] = [];
-        for (const pole of poles) {
-            if (!pole.codicePalina) continue;
-            buttons.push([
-                { text: formatFavoritePoleLabel(pole), callback_data: `sel:pole:${pole.codicePalina}` },
-            ]);
+        const selectable = poles.filter(pole => pole.codicePalina);
+        for (const row of chunkArray(selectable, 5)) {
+            buttons.push(row.map(pole => {
+                const idx = selectable.indexOf(pole);
+                return { text: String(idx + 1), callback_data: `sel:pole:${pole.codicePalina}` };
+            }));
         }
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
+        const list = selectable.map(formatPoleSelectionLine).join('\n');
         await ctx.reply(
-            `${Emoji.STAR} <b>Le tue paline preferite</b> (${poles.length})\n\n<i>Seleziona una palina per i dettagli:</i>`,
+            `${Emoji.STAR} <b>Le tue paline preferite</b> (${poles.length})\n\n${list}\n\n<i>Tocca il numero della palina per i dettagli:</i>`,
             { reply_markup: { inline_keyboard: buttons } }
         );
     } catch (error) {

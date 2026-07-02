@@ -5,8 +5,9 @@ import * as gtfs from './gtfsService';
 
 export class StopsService {
     public async getFirstStopByLocality(locality: string): Promise<Stop | null> {
-        // Try GTFS first (instant, offline)
-        const gtfsStops = gtfs.findStopsByName(locality);
+        // Prefer exact locality matches so searches for "Sora" do not start from
+        // unrelated localities such as "Sorano" or "Balsorano".
+        const gtfsStops = gtfs.findStopsByLocality(locality);
         if (gtfsStops.length > 0) {
             return this.mapGtfsStop(gtfsStops[0]);
         }
@@ -34,8 +35,8 @@ export class StopsService {
     }
 
     public async getStopsByLocality(locality: string): Promise<Stop[]> {
-        // Try GTFS first
-        const gtfsStops = gtfs.findStopsByName(locality);
+        // Try GTFS first, preferring exact locality matches over substring matches.
+        const gtfsStops = gtfs.findStopsByLocality(locality);
         if (gtfsStops.length > 0) {
             return gtfsStops.map(s => this.mapGtfsStop(s));
         }
@@ -52,9 +53,7 @@ export class StopsService {
     }
 
     private mapGtfsStop(s: gtfs.GtfsStop): Stop {
-        // Extract locality from stop name (format: "CITY | Details" or "CITY (Details)")
-        const parts = s.stopName.split(/[|!(]/);
-        const localita = parts[0].trim();
+        const localita = gtfs.extractLocalityFromStopName(s.stopName);
         return {
             codiceStop: s.stopId,
             nomeStop: s.stopName,

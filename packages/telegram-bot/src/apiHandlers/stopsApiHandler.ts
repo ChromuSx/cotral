@@ -4,6 +4,7 @@ import { fetchData, handleApiResponse } from '../utils/apiUtils';
 import { Stop } from '@cotral/shared';
 import { Emoji, bold, escapeHtml, divider, mapsLink, resultCountHeader } from '../utils/messageFormatting';
 import { logger } from '../utils/logger';
+import { chunkArray } from '../utils/functions';
 
 export async function getStopsByLocality(ctx: Context, locality: string): Promise<void> {
     const apiUrl = `/stops/${encodeURIComponent(locality)}`;
@@ -43,26 +44,38 @@ async function handleStopsAsSelection(ctx: Context, apiUrl: string, title: strin
 
         const MAX_BUTTONS = 20;
         const shown = stops.slice(0, MAX_BUTTONS);
-        const buttons: { text: string; callback_data: string }[][] = shown.map(stop => {
-            const name = stop.nomeStop ?? 'Fermata';
-            const hasCoords = stop.coordX && stop.coordY && !(stop.coordX === 0 && stop.coordY === 0);
-            const cb = hasCoords
-                ? `sel:stop:${stop.codiceStop}:${stop.coordX.toFixed(4)}:${stop.coordY.toFixed(4)}:${encodeURIComponent(name).slice(0, 20)}`
-                : `sel:stop:${stop.codiceStop}:0:0:${encodeURIComponent(name).slice(0, 20)}`;
-            return [{ text: `${Emoji.BUSSTOP} ${name} (${stop.codiceStop ?? '?'})`, callback_data: cb }];
-        });
+        const buttons: { text: string; callback_data: string }[][] = [];
+        for (const row of chunkArray(shown, 5)) {
+            buttons.push(row.map(stop => {
+                const idx = shown.indexOf(stop);
+                const name = stop.nomeStop ?? 'Fermata';
+                const hasCoords = stop.coordX && stop.coordY && !(stop.coordX === 0 && stop.coordY === 0);
+                const cb = hasCoords
+                    ? `sel:stop:${stop.codiceStop}:${stop.coordX.toFixed(4)}:${stop.coordY.toFixed(4)}:${encodeURIComponent(name).slice(0, 20)}`
+                    : `sel:stop:${stop.codiceStop}:0:0:${encodeURIComponent(name).slice(0, 20)}`;
+                return { text: String(idx + 1), callback_data: cb };
+            }));
+        }
 
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
+        const list = shown.map(formatStopSelectionLine).join('\n');
         const header = stops.length > MAX_BUTTONS
-            ? `${title}\n${resultCountHeader(stops.length, 'fermate')} (prime ${MAX_BUTTONS})\n\n<i>Seleziona una fermata:</i>`
-            : `${title}\n${resultCountHeader(stops.length, 'fermate')}\n\n<i>Seleziona una fermata:</i>`;
+            ? `${title}\n${resultCountHeader(stops.length, 'fermate')} (prime ${MAX_BUTTONS})\n\n${list}\n\n<i>Tocca il numero della fermata:</i>`
+            : `${title}\n${resultCountHeader(stops.length, 'fermate')}\n\n${list}\n\n<i>Tocca il numero della fermata:</i>`;
 
         await ctx.reply(header, { reply_markup: { inline_keyboard: buttons } });
     } catch (error) {
         logger.error('Errore recupero fermate', error);
         await ctx.reply(`${Emoji.WARNING} Si \u00e8 verificato un errore. Riprova.`);
     }
+}
+
+export function formatStopSelectionLine(stop: Stop, index: number): string {
+    const name = stop.nomeStop ?? 'Fermata';
+    const code = stop.codiceStop ? ` · codice ${stop.codiceStop}` : '';
+    const locality = stop.localita ? `\n   ${Emoji.PIN} ${escapeHtml(stop.localita)}` : '';
+    return `${index + 1}. ${Emoji.BUSSTOP} <b>${escapeHtml(name)}</b>${escapeHtml(code)}${locality}`;
 }
 
 function formatStopMessage(stop: Stop): string {

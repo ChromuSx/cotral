@@ -3,6 +3,9 @@ import { Transit } from '@cotral/shared';
 import {
     buildTransitDetailCallbackData,
     buildVehiclePositionFromTransitCallbackData,
+    compactTransitDestination,
+    formatTransitButtonLabel,
+    formatTransitSelectionLine,
     getTransitDisplayTime,
     resolveTransitByCallbackKey,
     sortTransitsByDisplayTime,
@@ -60,6 +63,34 @@ describe('transit display time', () => {
         ]);
 
         expect(sorted.map(t => t.idCorsa)).toEqual(['late-origin', 'early-origin']);
+    });
+});
+
+describe('transit selection button labels', () => {
+    it('compacts Cotral stop names so Telegram buttons are readable', () => {
+        expect(compactTransitDestination('SORA | Stazione FS (f5890)')).toBe('SORA Staz. FS');
+        expect(compactTransitDestination('ROMA | Anagnina (Metro A) (f3583)')).toBe('ROMA Anagnina');
+        expect(compactTransitDestination('FROSINONE | Via Monti Lepini Via Calvosa (f5827)')).toBe('FROSINONE');
+    });
+
+    it('keeps inline buttons numeric/short and moves details into message text', () => {
+        const sample = transit({
+            arrivoCorsa: 'SORA | Stazione FS (f5890)',
+            tempoTransito: '18:02',
+            monitorata: '1',
+            automezzo: { codice: '1234', isAlive: true },
+        });
+        const label = formatTransitButtonLabel(sample, true);
+        const line = formatTransitSelectionLine(sample, 0, true);
+
+        expect(label).toBe('💨 18:02');
+        expect(label).not.toContain('(tra');
+        expect(label).not.toContain('(f5890)');
+        expect(label.length).toBeLessThanOrEqual(10);
+        expect(line).toContain('1. 💨 <b>18:02</b>');
+        expect(line).toContain('→ SORA | Stazione FS');
+        expect(line).toContain('Real-time');
+        expect(line).toContain('mezzo 1234');
     });
 });
 

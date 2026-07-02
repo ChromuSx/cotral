@@ -222,9 +222,15 @@ export function ensureLoaded(): void {
 
 // --- Query functions ---
 
+export function extractLocalityFromStopName(stopName: string): string {
+    return stopName.split(/[|!(]/)[0].trim();
+}
+
 export function findStopsByName(query: string, limit: number = 20): GtfsStop[] {
     ensureLoaded();
-    const q = query.toLowerCase();
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
     const results: GtfsStop[] = [];
     for (const s of data.stops) {
         if (s.stopNameLower.includes(q)) {
@@ -233,6 +239,26 @@ export function findStopsByName(query: string, limit: number = 20): GtfsStop[] {
         }
     }
     return results;
+}
+
+export function findStopsByLocality(locality: string, limit: number = 200): GtfsStop[] {
+    ensureLoaded();
+    const q = locality.trim().toLowerCase();
+    if (!q) return [];
+
+    const exact: GtfsStop[] = [];
+    const partial: GtfsStop[] = [];
+    for (const s of data.stops) {
+        const stopLocality = extractLocalityFromStopName(s.stopName).toLowerCase();
+        if (stopLocality === q) {
+            exact.push(s);
+            if (exact.length >= limit) break;
+        } else if (exact.length === 0 && stopLocality.includes(q)) {
+            partial.push(s);
+        }
+    }
+
+    return exact.length > 0 ? exact : partial.slice(0, limit);
 }
 
 export function findStopById(stopId: string): GtfsStop | undefined {
@@ -272,8 +298,7 @@ export function getAllLocalities(): string[] {
     if (localitiesCache) return localitiesCache;
     const set = new Set<string>();
     for (const s of data.stops) {
-        const parts = s.stopName.split(/[|!(]/);
-        const loc = parts[0].trim();
+        const loc = extractLocalityFromStopName(s.stopName);
         if (loc) set.add(loc);
     }
     localitiesCache = [...set].sort();

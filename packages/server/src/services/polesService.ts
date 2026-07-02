@@ -162,8 +162,7 @@ export class PolesService {
         const stopRoutes = gtfs.getRoutesForStop(s.stopId);
         const destinations = gtfs.getDestinationsFromRoutes(stopRoutes);
 
-        const parts = s.stopName.split(/[|!(]/);
-        const localita = parts[0].trim();
+        const localita = gtfs.extractLocalityFromStopName(s.stopName);
 
         return {
             codicePalina: s.stopId,
