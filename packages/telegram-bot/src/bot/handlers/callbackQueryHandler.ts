@@ -67,6 +67,12 @@ export async function handleCallbackQuery(ctx: NarrowedContext<ExtendedContext, 
                 await transitsApiHandler.getTransitsByPoleCode(ctx, parts[2]);
             } else if (action === 'refresh') {
                 await transitsApiHandler.refreshTransitsByPoleCode(ctx, parts[2]);
+            } else if (action === 'refreshAll') {
+                await transitsApiHandler.refreshAllTransitsByPoleCode(ctx, parts[2]);
+            } else if (action === 'showAll') {
+                await transitsApiHandler.showAllTransitsByPoleCode(ctx, parts[2]);
+            } else if (action === 'compact') {
+                await transitsApiHandler.showCompactTransitsByPoleCode(ctx, parts[2]);
             } else {
                 await answerInvalidCallback(ctx);
             }

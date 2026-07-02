@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Transit } from '@cotral/shared';
 import {
     buildTransitDetailCallbackData,
+    buildTransitSelectionList,
     buildVehiclePositionFromTransitCallbackData,
     compactTransitDestination,
     formatTransitButtonLabel,
@@ -91,6 +92,50 @@ describe('transit selection button labels', () => {
         expect(line).toContain('→ SORA | Stazione FS');
         expect(line).toContain('Real-time');
         expect(line).toContain('mezzo 1234');
+    });
+});
+
+describe('transit selection summary', () => {
+    it('keeps the default screen compact and adds a button for hidden scheduled rides', () => {
+        const realtime = transit({
+            idCorsa: 'rt',
+            tempoTransito: '14:02',
+            monitorata: '1',
+            automezzo: { codice: '0149', isAlive: true },
+            arrivoCorsa: 'SORA | Stazione FS',
+        });
+        const scheduled = Array.from({ length: 8 }, (_, i) => transit({
+            idCorsa: `sched-${i}`,
+            tempoTransito: `15:${String(i).padStart(2, '0')}`,
+            monitorata: '0',
+            automezzo: { codice: null, isAlive: false },
+            arrivoCorsa: `Destinazione ${i}`,
+        }));
+
+        const msg = buildTransitSelectionList([realtime, ...scheduled], 0, 'FROSINONE', '58700');
+
+        expect(msg.text).toContain('Mostro 4 transiti principali');
+        expect(msg.text).toContain('5 schedulate nascoste');
+        expect(msg.text).toContain('1. 💨 <b>14:02</b>');
+        expect(msg.text).toContain('4. <b>15:02</b>');
+        expect(msg.text).not.toContain('5. <b>15:03</b>');
+        expect(msg.keyboard.flat()).toContainEqual({ text: '🕒 Vedi schedulate (8)', callback_data: 'transits:showAll:58700' });
+    });
+
+    it('can render the expanded scheduled view and a compact toggle', () => {
+        const scheduled = Array.from({ length: 6 }, (_, i) => transit({
+            idCorsa: `sched-${i}`,
+            tempoTransito: `15:${String(i).padStart(2, '0')}`,
+            monitorata: '0',
+            automezzo: { codice: null, isAlive: false },
+            arrivoCorsa: `Destinazione ${i}`,
+        }));
+
+        const msg = buildTransitSelectionList(scheduled, 0, 'FROSINONE', '58700', 'all');
+
+        expect(msg.text).toContain('6 corse schedulate');
+        expect(msg.text).toContain('6. <b>15:05</b>');
+        expect(msg.keyboard.flat()).toContainEqual({ text: '🔍 Mostra solo principali', callback_data: 'transits:compact:58700' });
     });
 });
 

@@ -11,6 +11,12 @@ interface TransitsResponse {
     transits: Transit[];
 }
 
+type TransitListMode = 'compact' | 'all';
+
+const MAX_TRANSIT_BUTTONS = 15;
+const MAX_SCHEDULED_IN_COMPACT_WITH_REALTIME = 3;
+const MAX_SCHEDULED_IN_COMPACT_ONLY = 5;
+
 export function getTransitDisplayTime(transit: Transit): string {
     return transit.tempoTransito || transit.orarioPartenzaCorsa || '';
 }
@@ -130,7 +136,30 @@ export function formatTransitSelectionLine(transit: Transit, index: number, isNe
     ].join('\n');
 }
 
-function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName: string, poleCode: string) {
+function selectTransitsForDisplay(sorted: Transit[], mode: TransitListMode): { shown: Transit[]; hiddenScheduledCount: number; totalScheduledCount: number } {
+    const scheduled = sorted.filter(t => getTransitTrackingStatus(t) !== 'realtime');
+    if (mode === 'all') {
+        return {
+            shown: sorted.slice(0, MAX_TRANSIT_BUTTONS),
+            hiddenScheduledCount: Math.max(0, sorted.length - MAX_TRANSIT_BUTTONS),
+            totalScheduledCount: scheduled.length,
+        };
+    }
+
+    const realtime = sorted.filter(t => getTransitTrackingStatus(t) === 'realtime');
+    const scheduledLimit = realtime.length > 0 ? MAX_SCHEDULED_IN_COMPACT_WITH_REALTIME : MAX_SCHEDULED_IN_COMPACT_ONLY;
+    const scheduledToShow = scheduled.slice(0, scheduledLimit);
+    const chosen = new Set<Transit>([...realtime, ...scheduledToShow]);
+    const shown = sorted.filter(t => chosen.has(t)).slice(0, MAX_TRANSIT_BUTTONS);
+
+    return {
+        shown,
+        hiddenScheduledCount: Math.max(0, scheduled.length - scheduledToShow.length),
+        totalScheduledCount: scheduled.length,
+    };
+}
+
+export function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName: string, poleCode: string, mode: TransitListMode = 'compact') {
     const realtimeCount = sorted.filter(t => getTransitTrackingStatus(t) === 'realtime').length;
     const scheduledCount = sorted.length - realtimeCount;
 
@@ -146,29 +175,45 @@ function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName:
         : `${sorted.length} cors${sorted.length === 1 ? 'a' : 'e'} schedulat${sorted.length === 1 ? 'a' : 'e'}`;
 
     const buttons: { text: string; callback_data: string }[][] = [];
-    const MAX_BUTTONS = 15;
-    const shown = sorted.slice(0, MAX_BUTTONS);
-    const list = formatSelectionList(shown.map((transit, i) => formatTransitSelectionLine(transit, i, i === nextIdx)));
+    const { shown, hiddenScheduledCount, totalScheduledCount } = selectTransitsForDisplay(sorted, mode);
+    const nextTransit = nextIdx >= 0 ? sorted[nextIdx] : undefined;
+    const list = formatSelectionList(shown.map((transit, i) => formatTransitSelectionLine(transit, i, transit === nextTransit)));
+    const hiddenSummary = mode === 'compact' && hiddenScheduledCount > 0
+        ? `${Emoji.CLOCK} Mostro ${shown.length} transiti principali. ${hiddenScheduledCount} schedulat${hiddenScheduledCount === 1 ? 'a' : 'e'} nascost${hiddenScheduledCount === 1 ? 'a' : 'e'} per tenere la schermata pulita.`
+        : mode === 'all' && sorted.length > MAX_TRANSIT_BUTTONS
+            ? `${Emoji.WARNING} Vista completa limitata ai primi ${MAX_TRANSIT_BUTTONS} transiti.`
+            : '';
 
     const header = [
         `${Emoji.BUSSTOP} <b>Transiti per: ${poleName}</b>`,
         `${Emoji.CLOCK} Aggiornato alle ${nowTimestamp()} \u2014 ${counts}${nextSummary}`,
+        hiddenSummary,
         '',
         list,
         '',
         '<i>Tocca il numero del transito per aprire i dettagli:</i>',
-    ].join('\n');
+    ].filter(line => line !== '').join('\n');
 
     for (const row of chunkArray(shown, 5)) {
         buttons.push(row.map((t) => {
-            const i = shown.indexOf(t);
-            return { text: String(i + 1), callback_data: buildTransitDetailCallbackData(poleCode, t, i) };
+            const displayIndex = shown.indexOf(t);
+            const sortedIndex = sorted.indexOf(t);
+            return { text: String(displayIndex + 1), callback_data: buildTransitDetailCallbackData(poleCode, t, sortedIndex) };
         }));
     }
 
     buttons.push([
-        { text: `\u{1F504} Aggiorna`, callback_data: `transits:refresh:${poleCode}` },
+        { text: `\u{1F504} Aggiorna`, callback_data: mode === 'all' ? `transits:refreshAll:${poleCode}` : `transits:refresh:${poleCode}` },
     ]);
+    if (mode === 'compact' && hiddenScheduledCount > 0) {
+        buttons.push([
+            { text: `${Emoji.CLOCK} Vedi schedulate (${totalScheduledCount})`, callback_data: `transits:showAll:${poleCode}` },
+        ]);
+    } else if (mode === 'all') {
+        buttons.push([
+            { text: `${Emoji.SEARCH} Mostra solo principali`, callback_data: `transits:compact:${poleCode}` },
+        ]);
+    }
     buttons.push([
         { text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' },
     ]);
@@ -176,88 +221,95 @@ function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName:
     return { text: header, keyboard: buttons };
 }
 
-export async function getTransitsByPoleCode(ctx: Context, poleCode: string): Promise<void> {
+async function renderTransitsByPoleCode(ctx: Context, poleCode: string, mode: TransitListMode, editExisting: boolean): Promise<void> {
     const apiUrl = `/transits/${encodeURIComponent(poleCode)}`;
 
     try {
-        await ctx.sendChatAction('typing');
+        if (!editExisting) await ctx.sendChatAction('typing');
         const response = await fetchData<TransitsResponse>(apiUrl);
         if (!response?.transits?.length) {
-            await ctx.reply(
-                `${Emoji.SEARCH} Nessun transito disponibile per questa palina.\n\n<i>Verifica il codice o riprova pi\u00f9 tardi.</i>`,
-                {
-                    reply_markup: {
-                        inline_keyboard: [[
-                            { text: `${Emoji.SEARCH} Nuova ricerca`, callback_data: 'nav:transits_menu' },
-                            { text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' },
-                        ]]
-                    }
-                }
-            );
-            return;
-        }
-
-        const sorted = sortTransitsByDisplayTime(response.transits);
-        const nextIdx = findNextTransitIndex(sorted);
-        const poleName = response.pole?.nomePalina ? escapeHtml(response.pole.nomePalina) : escapeHtml(poleCode);
-        const msg = buildTransitSelectionList(sorted, nextIdx, poleName, poleCode);
-
-        await ctx.reply(msg.text, {
-            reply_markup: { inline_keyboard: msg.keyboard },
-            link_preview_options: { is_disabled: true },
-        });
-    } catch (error) {
-        logger.error('Errore recupero transiti', error, { poleCode });
-        await ctx.reply(`${Emoji.WARNING} Si \u00e8 verificato un errore durante il recupero dei transiti.`);
-    }
-}
-
-export async function refreshTransitsByPoleCode(ctx: Context, poleCode: string): Promise<void> {
-    const apiUrl = `/transits/${encodeURIComponent(poleCode)}`;
-
-    try {
-        const response = await fetchData<TransitsResponse>(apiUrl);
-        if (!response?.transits?.length) {
-            try {
-                await (ctx as any).editMessageText(
-                    `${Emoji.SEARCH} Nessun transito disponibile al momento.`,
-                    {
-                        parse_mode: 'HTML' as const,
-                        reply_markup: {
-                            inline_keyboard: [[
-                                { text: `\u{1F504} Riprova`, callback_data: `transits:refresh:${poleCode}` },
-                                { text: `${Emoji.BACK} Menu`, callback_data: 'MAIN_MENU' },
-                            ]]
-                        }
-                    }
-                );
-            } catch { await ctx.reply(`${Emoji.SEARCH} Nessun transito disponibile.`); }
-            return;
-        }
-
-        const sorted = sortTransitsByDisplayTime(response.transits);
-        const nextIdx = findNextTransitIndex(sorted);
-        const poleName = response.pole?.nomePalina ? escapeHtml(response.pole.nomePalina) : escapeHtml(poleCode);
-        const msg = buildTransitSelectionList(sorted, nextIdx, poleName, poleCode);
-
-        try {
-            await (ctx as any).editMessageText(msg.text, {
+            const text = editExisting
+                ? `${Emoji.SEARCH} Nessun transito disponibile al momento.`
+                : `${Emoji.SEARCH} Nessun transito disponibile per questa palina.\n\n<i>Verifica il codice o riprova pi\u00f9 tardi.</i>`;
+            const extra = {
                 parse_mode: 'HTML' as const,
-                reply_markup: { inline_keyboard: msg.keyboard },
-                link_preview_options: { is_disabled: true },
-            });
-        } catch {
+                reply_markup: {
+                    inline_keyboard: [[
+                        {
+                            text: editExisting ? `\u{1F504} Riprova` : `${Emoji.SEARCH} Nuova ricerca`,
+                            callback_data: editExisting ? `transits:refresh:${poleCode}` : 'nav:transits_menu',
+                        },
+                        { text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' },
+                    ]]
+                }
+            };
+
+            if (editExisting) {
+                try {
+                    await (ctx as any).editMessageText(text, extra);
+                } catch {
+                    await ctx.reply(`${Emoji.SEARCH} Nessun transito disponibile.`);
+                }
+            } else {
+                await ctx.reply(text, extra);
+            }
+            return;
+        }
+
+        const sorted = sortTransitsByDisplayTime(response.transits);
+        const nextIdx = findNextTransitIndex(sorted);
+        const poleName = response.pole?.nomePalina ? escapeHtml(response.pole.nomePalina) : escapeHtml(poleCode);
+        const msg = buildTransitSelectionList(sorted, nextIdx, poleName, poleCode, mode);
+
+        if (editExisting) {
+            try {
+                await (ctx as any).editMessageText(msg.text, {
+                    parse_mode: 'HTML' as const,
+                    reply_markup: { inline_keyboard: msg.keyboard },
+                    link_preview_options: { is_disabled: true },
+                });
+            } catch {
+                await ctx.reply(msg.text, {
+                    reply_markup: { inline_keyboard: msg.keyboard },
+                    link_preview_options: { is_disabled: true },
+                });
+            }
+        } else {
             await ctx.reply(msg.text, {
                 reply_markup: { inline_keyboard: msg.keyboard },
                 link_preview_options: { is_disabled: true },
             });
         }
     } catch (error) {
-        logger.error('Errore refresh transiti', error, { poleCode });
-        try {
-            await (ctx as any).answerCbQuery(`${Emoji.WARNING} Errore. Riprova.`, { show_alert: true });
-        } catch { /* ignore */ }
+        logger.error('Errore recupero transiti', error, { poleCode, mode, editExisting });
+        if (editExisting) {
+            try {
+                await (ctx as any).answerCbQuery(`${Emoji.WARNING} Errore. Riprova.`, { show_alert: true });
+            } catch { /* ignore */ }
+        } else {
+            await ctx.reply(`${Emoji.WARNING} Si \u00e8 verificato un errore durante il recupero dei transiti.`);
+        }
     }
+}
+
+export async function getTransitsByPoleCode(ctx: Context, poleCode: string): Promise<void> {
+    await renderTransitsByPoleCode(ctx, poleCode, 'compact', false);
+}
+
+export async function refreshTransitsByPoleCode(ctx: Context, poleCode: string): Promise<void> {
+    await renderTransitsByPoleCode(ctx, poleCode, 'compact', true);
+}
+
+export async function refreshAllTransitsByPoleCode(ctx: Context, poleCode: string): Promise<void> {
+    await renderTransitsByPoleCode(ctx, poleCode, 'all', true);
+}
+
+export async function showAllTransitsByPoleCode(ctx: Context, poleCode: string): Promise<void> {
+    await renderTransitsByPoleCode(ctx, poleCode, 'all', true);
+}
+
+export async function showCompactTransitsByPoleCode(ctx: Context, poleCode: string): Promise<void> {
+    await renderTransitsByPoleCode(ctx, poleCode, 'compact', true);
 }
 
 export async function showVehiclePositionForTransit(ctx: Context, poleCode: string, index: number): Promise<void> {
