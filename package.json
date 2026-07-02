@@ -22,5 +22,8 @@
     "test:server": "npm run test -w @cotral/server",
     "test:telegram-bot": "npm run test -w @cotral/telegram-bot",
     "test:discord-bot": "npm run test -w @cotral/discord-bot"
+  },
+  "overrides": {
+    "undici": "^6.27.0"
   }
 }
