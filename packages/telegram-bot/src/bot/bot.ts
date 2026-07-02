@@ -17,7 +17,7 @@ import { handleCallbackQuery } from './handlers/callbackQueryHandler';
 import { handleLocation } from './handlers/locationHandler';
 import { fetchFavoritePoles, formatPoleSelectionLine } from '../apiHandlers/polesApiHandler';
 import { logger } from '../utils/logger';
-import { Emoji, greetingByTime } from '../utils/messageFormatting';
+import { Emoji, formatSelectionList, greetingByTime } from '../utils/messageFormatting';
 import { chunkArray } from '../utils/functions';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -161,7 +161,7 @@ export async function mainMenu(ctx: ExtendedContext) {
                 return { text: String(idx + 1), callback_data: `sel:pole:${pole.codicePalina}` };
             }));
         }
-        const list = selectable.map(formatPoleSelectionLine).join('\n');
+        const list = formatSelectionList(selectable.map(formatPoleSelectionLine));
         await ctx.reply(
             `${Emoji.STAR} <b>Le tue paline preferite:</b>\n\n${list}\n\n<i>Tocca il numero della palina per i dettagli:</i>`,
             { reply_markup: { inline_keyboard: inlineKeyboard } }

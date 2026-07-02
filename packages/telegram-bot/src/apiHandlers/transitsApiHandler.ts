@@ -2,7 +2,7 @@ import { Context } from 'telegraf';
 import { Transit, Pole, getTransitTrackingStatus } from '@cotral/shared';
 import { fetchData } from '../utils/apiUtils';
 import { logger } from '../utils/logger';
-import { Emoji, bold, escapeHtml, divider, relativeTime, parseTime, nowTimestamp } from '../utils/messageFormatting';
+import { Emoji, bold, escapeHtml, divider, formatSelectionList, relativeTime, parseTime, nowTimestamp } from '../utils/messageFormatting';
 import { chunkArray } from '../utils/functions';
 import { getVehicleRealTimePositions, VehiclePositionContext } from './vehiclesApiHandler';
 
@@ -148,13 +148,13 @@ function buildTransitSelectionList(sorted: Transit[], nextIdx: number, poleName:
     const buttons: { text: string; callback_data: string }[][] = [];
     const MAX_BUTTONS = 15;
     const shown = sorted.slice(0, MAX_BUTTONS);
-    const listLines = shown.map((transit, i) => formatTransitSelectionLine(transit, i, i === nextIdx));
+    const list = formatSelectionList(shown.map((transit, i) => formatTransitSelectionLine(transit, i, i === nextIdx)));
 
     const header = [
         `${Emoji.BUSSTOP} <b>Transiti per: ${poleName}</b>`,
         `${Emoji.CLOCK} Aggiornato alle ${nowTimestamp()} \u2014 ${counts}${nextSummary}`,
         '',
-        ...listLines,
+        list,
         '',
         '<i>Tocca il numero del transito per aprire i dettagli:</i>',
     ].join('\n');

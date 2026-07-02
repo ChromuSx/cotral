@@ -4,7 +4,7 @@ import { ExtendedContext } from '../interfaces/ExtendedContext';
 import { fetchData, handleApiResponse } from '../utils/apiUtils';
 import { logger } from '../utils/logger';
 import api from '../services/axiosService';
-import { Emoji, bold, escapeHtml, divider, mapsLink, resultCountHeader } from '../utils/messageFormatting';
+import { Emoji, bold, escapeHtml, divider, formatSelectionList, mapsLink, resultCountHeader } from '../utils/messageFormatting';
 import { chunkArray, convertAndValidateCoords } from '../utils/functions';
 
 export async function getPolesByCode(ctx: Context, code: string, params: { userId?: number | undefined }): Promise<void> {
@@ -65,7 +65,7 @@ export async function getAllPolesDestinationsByArrivalLocality(ctx: Context, arr
         }
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
-        const list = shown.map((dest, idx) => `${idx + 1}. ${Emoji.COMPASS} ${escapeHtml(dest)}`).join('\n');
+        const list = formatSelectionList(shown.map((dest, idx) => `${idx + 1}. ${Emoji.COMPASS} ${escapeHtml(dest)}`));
         const capped = destinations.length > MAX ? ` (prime ${MAX})` : '';
         const header = `${Emoji.COMPASS} <b>Destinazioni da ${bold(arrivalLocality)}</b> (${destinations.length})${capped}\n\n${list}\n\n<i>Tocca il numero della destinazione per cercare le paline:</i>`;
         await ctx.reply(header, { reply_markup: { inline_keyboard: buttons } });
@@ -107,7 +107,7 @@ async function handlePolesAsSelection(ctx: Context, apiUrl: string, title: strin
 
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
-        const list = shown.map(formatPoleSelectionLine).join('\n');
+        const list = formatSelectionList(shown.map(formatPoleSelectionLine));
         const header = poles.length > MAX_BUTTONS
             ? `${title}\n${resultCountHeader(poles.length, 'paline')} (prime ${MAX_BUTTONS})\n\n${list}\n\n<i>Tocca il numero della palina per vedere i dettagli:</i>`
             : `${title}\n${resultCountHeader(poles.length, 'paline')}\n\n${list}\n\n<i>Tocca il numero della palina per vedere i dettagli:</i>`;
@@ -213,7 +213,7 @@ export async function displayFavoritePoles(ctx: Context, userId: number): Promis
         }
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
-        const list = selectable.map(formatPoleSelectionLine).join('\n');
+        const list = formatSelectionList(selectable.map(formatPoleSelectionLine));
         await ctx.reply(
             `${Emoji.STAR} <b>Le tue paline preferite</b> (${poles.length})\n\n${list}\n\n<i>Tocca il numero della palina per i dettagli:</i>`,
             { reply_markup: { inline_keyboard: buttons } }

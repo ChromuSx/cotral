@@ -88,3 +88,7 @@ export function resultCountHeader(count: number, label: string): string {
     if (count === 1) return `${Emoji.CHECK} <b>1 ${label} trovato</b>`;
     return `${Emoji.CHECK} <b>${count} ${label} trovati</b>`;
 }
+
+export function formatSelectionList(items: string[]): string {
+    return items.join('\n\n');
+}

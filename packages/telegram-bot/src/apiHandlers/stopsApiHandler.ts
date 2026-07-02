@@ -2,7 +2,7 @@ import { Context } from 'telegraf';
 import { ExtendedContext } from '../interfaces/ExtendedContext';
 import { fetchData, handleApiResponse } from '../utils/apiUtils';
 import { Stop } from '@cotral/shared';
-import { Emoji, bold, escapeHtml, divider, mapsLink, resultCountHeader } from '../utils/messageFormatting';
+import { Emoji, bold, escapeHtml, divider, formatSelectionList, mapsLink, resultCountHeader } from '../utils/messageFormatting';
 import { logger } from '../utils/logger';
 import { chunkArray } from '../utils/functions';
 
@@ -59,7 +59,7 @@ async function handleStopsAsSelection(ctx: Context, apiUrl: string, title: strin
 
         buttons.push([{ text: `${Emoji.BACK} Menu principale`, callback_data: 'MAIN_MENU' }]);
 
-        const list = shown.map(formatStopSelectionLine).join('\n');
+        const list = formatSelectionList(shown.map(formatStopSelectionLine));
         const header = stops.length > MAX_BUTTONS
             ? `${title}\n${resultCountHeader(stops.length, 'fermate')} (prime ${MAX_BUTTONS})\n\n${list}\n\n<i>Tocca il numero della fermata:</i>`
             : `${title}\n${resultCountHeader(stops.length, 'fermate')}\n\n${list}\n\n<i>Tocca il numero della fermata:</i>`;
