@@ -114,8 +114,11 @@ export function formatTransitSelectionLine(transit: Transit, index: number, isNe
     const rel = time !== '??:??' ? ` ${relativeTime(time)}` : '';
     const origin = cleanTransitEndpoint(transit.partenzaCorsa);
     const destination = cleanTransitEndpoint(transit.arrivoCorsa);
+    const departure = transit.orarioPartenzaCorsa && transit.orarioPartenzaCorsa !== time
+        ? ` (part. ${escapeHtml(transit.orarioPartenzaCorsa)})`
+        : '';
     const routeLine = origin !== 'N/D'
-        ? `   da ${escapeHtml(origin)} → ${escapeHtml(destination)}`
+        ? `   da ${escapeHtml(origin)}${departure} → ${escapeHtml(destination)}`
         : `   → ${escapeHtml(destination)}`;
     const status = getTransitTrackingStatus(transit);
     const vehicle = transit.automezzo?.codice ? ` · mezzo ${escapeHtml(transit.automezzo.codice)}` : '';
