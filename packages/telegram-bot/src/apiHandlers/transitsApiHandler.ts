@@ -112,7 +112,11 @@ export function formatTransitButtonLabel(transit: Transit, isNext: boolean): str
 export function formatTransitSelectionLine(transit: Transit, index: number, isNext: boolean): string {
     const time = getTransitDisplayTime(transit) || '??:??';
     const rel = time !== '??:??' ? ` ${relativeTime(time)}` : '';
+    const origin = cleanTransitEndpoint(transit.partenzaCorsa);
     const destination = cleanTransitEndpoint(transit.arrivoCorsa);
+    const routeLine = origin !== 'N/D'
+        ? `   da ${escapeHtml(origin)} → ${escapeHtml(destination)}`
+        : `   → ${escapeHtml(destination)}`;
     const status = getTransitTrackingStatus(transit);
     const vehicle = transit.automezzo?.codice ? ` · mezzo ${escapeHtml(transit.automezzo.codice)}` : '';
     const next = isNext ? '💨 ' : '';
@@ -131,7 +135,7 @@ export function formatTransitSelectionLine(transit: Transit, index: number, isNe
 
     return [
         `${index + 1}. ${next}<b>${escapeHtml(time)}</b>${rel}`,
-        `   → ${escapeHtml(destination)}`,
+        routeLine,
         `   ${statusLine}`,
     ].join('\n');
 }

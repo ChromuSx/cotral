@@ -89,7 +89,7 @@ describe('transit selection button labels', () => {
         expect(label).not.toContain('(f5890)');
         expect(label.length).toBeLessThanOrEqual(10);
         expect(line).toContain('1. 💨 <b>18:02</b>');
-        expect(line).toContain('→ SORA | Stazione FS');
+        expect(line).toContain('da Roma Anagnina → SORA | Stazione FS');
         expect(line).toContain('Real-time');
         expect(line).toContain('mezzo 1234');
     });
