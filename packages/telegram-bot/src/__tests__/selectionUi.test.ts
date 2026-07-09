@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Pole, Stop } from '@cotral/shared';
-import { formatPoleSelectionLine } from '../apiHandlers/polesApiHandler';
+import { formatPoleSelectionLine, selectPoleByCode } from '../apiHandlers/polesApiHandler';
 import { formatStopSelectionLine } from '../apiHandlers/stopsApiHandler';
 import { formatSelectionList } from '../utils/messageFormatting';
 
@@ -47,5 +47,20 @@ describe('selection list formatting', () => {
             '2. <b>Seconda opzione</b>\n   Dettaglio B',
             '3. <b>Terza opzione</b>',
         ].join('\n\n'));
+    });
+
+    it('selects the exact pole code when a stop lookup returns multiple same-name paline', () => {
+        const f5867 = {
+            codicePalina: 'f5867',
+            nomePalina: 'VEROLI | Abbazia di Casamari',
+            destinazioni: ['Sora'],
+        } as unknown as Pole;
+        const f5915 = {
+            codicePalina: 'f5915',
+            nomePalina: 'VEROLI | Abbazia di Casamari',
+            destinazioni: ['Roma Anagnina'],
+        } as unknown as Pole;
+
+        expect(selectPoleByCode([f5867, f5915], 'f5915')).toBe(f5915);
     });
 });

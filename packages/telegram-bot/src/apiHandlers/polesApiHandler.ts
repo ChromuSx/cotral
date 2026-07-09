@@ -148,6 +148,11 @@ export function buildPoleInlineKeyboard(pole: Pole): { text: string; callback_da
     return keyboard;
 }
 
+export function selectPoleByCode(poles: Pole[], poleCode: string): Pole | undefined {
+    const normalizedCode = poleCode.trim().toLowerCase();
+    return poles.find(pole => pole.codicePalina?.trim().toLowerCase() === normalizedCode) ?? poles[0];
+}
+
 export async function displaySinglePoleDetails(ctx: Context, poleCode: string, userId?: number): Promise<void> {
     try {
         await ctx.sendChatAction('typing');
@@ -158,7 +163,11 @@ export async function displaySinglePoleDetails(ctx: Context, poleCode: string, u
             await ctx.reply(`${Emoji.SEARCH} Palina non trovata.`);
             return;
         }
-        const pole = poles[0];
+        const pole = selectPoleByCode(poles, poleCode);
+        if (!pole) {
+            await ctx.reply(`${Emoji.SEARCH} Palina non trovata.`);
+            return;
+        }
         await ctx.reply(formatPoleMessage(pole), {
             reply_markup: { inline_keyboard: buildPoleInlineKeyboard(pole) },
             link_preview_options: { is_disabled: true },
