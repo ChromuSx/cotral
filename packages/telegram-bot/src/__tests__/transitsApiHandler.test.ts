@@ -96,6 +96,14 @@ describe('transit selection button labels', () => {
 });
 
 describe('transit selection summary', () => {
+    it('includes the selected pole code in the header to disambiguate same-name paline', () => {
+        const msg = buildTransitSelectionList([
+            transit({ idCorsa: 'casamari-roma', arrivoCorsa: 'ROMA | Anagnina (Metro A) (f3583)' }),
+        ], 0, 'VEROLI, Abbazia di Casamari', 'f5915');
+
+        expect(msg.text).toContain('Transiti per: VEROLI, Abbazia di Casamari · codice f5915');
+    });
+
     it('keeps the default screen compact and adds a button for hidden scheduled rides', () => {
         const realtime = transit({
             idCorsa: 'rt',

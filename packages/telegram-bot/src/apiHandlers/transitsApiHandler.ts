@@ -191,8 +191,9 @@ export function buildTransitSelectionList(sorted: Transit[], nextIdx: number, po
             ? `${Emoji.WARNING} Vista completa limitata ai primi ${MAX_TRANSIT_BUTTONS} transiti.`
             : '';
 
+    const poleCodeLabel = poleCode ? ` · codice ${escapeHtml(poleCode)}` : '';
     const header = [
-        `${Emoji.BUSSTOP} <b>Transiti per: ${poleName}</b>`,
+        `${Emoji.BUSSTOP} <b>Transiti per: ${poleName}${poleCodeLabel}</b>`,
         `${Emoji.CLOCK} Aggiornato alle ${nowTimestamp()} \u2014 ${counts}${nextSummary}`,
         hiddenSummary,
         '',
