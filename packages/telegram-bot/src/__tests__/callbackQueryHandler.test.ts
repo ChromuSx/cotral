@@ -70,8 +70,16 @@ describe('Telegram callback query handler', () => {
 
         await handleCallbackQuery(ctx);
 
-        expect(transitsApiHandler.showVehiclePositionForTransitByKey).toHaveBeenCalledWith(ctx, '58700', 'id:corsa-42');
+        expect(transitsApiHandler.showVehiclePositionForTransitByKey).toHaveBeenCalledWith(ctx, '58700', 'id:corsa-42', undefined);
         expect(transitsApiHandler.showVehiclePositionForTransit).not.toHaveBeenCalled();
+    });
+
+    it('routes vehicle position callbacks with a fallback vehicle code for expired transits', async () => {
+        const ctx = ctxWithData('vehicles:fromTransit:58700:id:corsa-42:vehicle:0118');
+
+        await handleCallbackQuery(ctx);
+
+        expect(transitsApiHandler.showVehiclePositionForTransitByKey).toHaveBeenCalledWith(ctx, '58700', 'id:corsa-42', '0118');
     });
 
     it('shows a clean alert instead of throwing when a callback handler fails', async () => {

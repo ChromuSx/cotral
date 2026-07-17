@@ -41,7 +41,11 @@ export function buildTransitDetailCallbackData(poleCode: string, transit: Transi
 }
 
 export function buildVehiclePositionFromTransitCallbackData(poleCode: string, transit: Transit, fallbackIndex: number): string {
-    return `vehicles:fromTransit:${poleCode}:${buildTransitCallbackKey(transit, fallbackIndex)}`;
+    const callbackKey = buildTransitCallbackKey(transit, fallbackIndex);
+    const vehicleCode = transit.automezzo?.codice;
+    return vehicleCode
+        ? `vehicles:fromTransit:${poleCode}:${callbackKey}:vehicle:${encodeURIComponent(vehicleCode)}`
+        : `vehicles:fromTransit:${poleCode}:${callbackKey}`;
 }
 
 export function isValidTransitCallbackKey(key: string | undefined): key is string {
@@ -324,20 +328,28 @@ export async function showVehiclePositionForTransit(ctx: Context, poleCode: stri
     await showVehiclePositionForTransitByKey(ctx, poleCode, String(index));
 }
 
-export async function showVehiclePositionForTransitByKey(ctx: Context, poleCode: string, transitKey: string): Promise<void> {
+export async function showVehiclePositionForTransitByKey(ctx: Context, poleCode: string, transitKey: string, fallbackVehicleCode?: string): Promise<void> {
     const apiUrl = `/transits/${encodeURIComponent(poleCode)}`;
 
     try {
         await ctx.sendChatAction('typing');
         const response = await fetchData<TransitsResponse>(apiUrl);
         if (!response?.transits?.length) {
+            if (fallbackVehicleCode) {
+                await getVehicleRealTimePositions(ctx, fallbackVehicleCode);
+                return;
+            }
             await ctx.reply(`${Emoji.SEARCH} Transito non più disponibile.`);
             return;
         }
 
         const sorted = sortTransitsByDisplayTime(response.transits);
         const transit = resolveTransitByCallbackKey(sorted, transitKey);
-        const vehicleCode = transit?.automezzo?.codice;
+        const vehicleCode = transit?.automezzo?.codice ?? fallbackVehicleCode;
+        if (!transit && fallbackVehicleCode) {
+            await getVehicleRealTimePositions(ctx, fallbackVehicleCode);
+            return;
+        }
         if (!transit || !vehicleCode) {
             await ctx.reply(`${Emoji.SEARCH} Posizione veicolo non disponibile per questo transito.`);
             return;
@@ -345,7 +357,7 @@ export async function showVehiclePositionForTransitByKey(ctx: Context, poleCode:
 
         await getVehicleRealTimePositions(ctx, vehicleCode, buildVehiclePositionContext(transit, poleCode, transitKey));
     } catch (error) {
-        logger.error('Errore posizione veicolo da transito', error, { poleCode, transitKey });
+        logger.error('Errore posizione veicolo da transito', error, { poleCode, transitKey, fallbackVehicleCode });
         await ctx.reply(`${Emoji.WARNING} Errore nel recupero della posizione.`);
     }
 }
@@ -368,7 +380,9 @@ function buildVehiclePositionContext(transit: Transit, poleCode: string, transit
             : status === 'monitored_offline'
                 ? 'tracciata, bus non in trasmissione'
                 : 'schedulata, no real-time',
-        refreshCallbackData: `vehicles:fromTransit:${poleCode}:${transitKey}`,
+        refreshCallbackData: transit.automezzo?.codice
+            ? `vehicles:fromTransit:${poleCode}:${transitKey}:vehicle:${encodeURIComponent(transit.automezzo.codice)}`
+            : `vehicles:fromTransit:${poleCode}:${transitKey}`,
     };
 }
 

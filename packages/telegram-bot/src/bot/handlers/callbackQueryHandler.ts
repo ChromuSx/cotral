@@ -20,6 +20,18 @@ function transitKeyFromParts(parts: string[], startIndex: number): string | unde
     return transitsApiHandler.isValidTransitCallbackKey(key) ? key : undefined;
 }
 
+function transitKeyAndFallbackVehicleFromParts(parts: string[], startIndex: number): { transitKey?: string; fallbackVehicleCode?: string } {
+    const markerIndex = parts.indexOf('vehicle', startIndex);
+    const keyParts = markerIndex >= 0 ? parts.slice(startIndex, markerIndex) : parts.slice(startIndex);
+    const key = keyParts.join(':');
+    return {
+        transitKey: transitsApiHandler.isValidTransitCallbackKey(key) ? key : undefined,
+        fallbackVehicleCode: markerIndex >= 0 && parts[markerIndex + 1]
+            ? decodeURIComponent(parts[markerIndex + 1])
+            : undefined,
+    };
+}
+
 export async function handleCallbackQuery(ctx: NarrowedContext<ExtendedContext, Update.CallbackQueryUpdate<CallbackQuery>>) {
     if (!('data' in ctx.callbackQuery)) return;
 
@@ -94,12 +106,12 @@ export async function handleCallbackQuery(ctx: NarrowedContext<ExtendedContext, 
             if (action === 'getVehicleRealTimePositions' && parts[2]) {
                 await vehiclesApiHandler.getVehicleRealTimePositions(ctx, parts[2]);
             } else if (action === 'fromTransit' && parts[2]) {
-                const transitKey = transitKeyFromParts(parts, 3);
+                const { transitKey, fallbackVehicleCode } = transitKeyAndFallbackVehicleFromParts(parts, 3);
                 if (!transitKey) {
                     await answerInvalidCallback(ctx);
                     return;
                 }
-                await transitsApiHandler.showVehiclePositionForTransitByKey(ctx, parts[2], transitKey);
+                await transitsApiHandler.showVehiclePositionForTransitByKey(ctx, parts[2], transitKey, fallbackVehicleCode);
             } else {
                 await answerInvalidCallback(ctx);
             }

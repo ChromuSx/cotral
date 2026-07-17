@@ -153,6 +153,9 @@ describe('stable transit callback keys', () => {
 
         expect(buildTransitDetailCallbackData('58700', selected, 3)).toBe('td:58700:id:corsa-42');
         expect(buildVehiclePositionFromTransitCallbackData('58700', selected, 3)).toBe('vehicles:fromTransit:58700:id:corsa-42');
+
+        const selectedWithVehicle = transit({ idCorsa: 'corsa-43', automezzo: { codice: '0118', isAlive: true } });
+        expect(buildVehiclePositionFromTransitCallbackData('58700', selectedWithVehicle, 4)).toBe('vehicles:fromTransit:58700:id:corsa-43:vehicle:0118');
     });
 
     it('resolves a selected transit by idCorsa even if the refreshed list order changed', () => {
