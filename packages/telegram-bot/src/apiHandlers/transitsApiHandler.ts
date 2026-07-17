@@ -12,10 +12,17 @@ interface TransitsResponse {
 }
 
 type TransitListMode = 'compact' | 'all';
+type RecentlySeenTransit = Transit & { recentlySeenLive?: boolean };
 
 const MAX_TRANSIT_BUTTONS = 15;
 const MAX_SCHEDULED_IN_COMPACT_WITH_REALTIME = 3;
 const MAX_SCHEDULED_IN_COMPACT_ONLY = 5;
+const RECENT_REALTIME_TRANSIT_TTL_MS = 45 * 60 * 1000;
+const recentlySeenRealtimeTransitsByPole = new Map<string, { transit: Transit; lastSeenAt: number }[]>();
+
+function hasVehicleCode(transit: Transit): boolean {
+    return Boolean(transit.automezzo?.codice);
+}
 
 export function getTransitDisplayTime(transit: Transit): string {
     return transit.tempoTransito || transit.orarioPartenzaCorsa || '';
@@ -64,6 +71,42 @@ export function resolveTransitByCallbackKey(transits: Transit[], key: string): T
     const index = parseInt(key, 10);
     if (Number.isNaN(index)) return undefined;
     return transits[index];
+}
+
+export function mergeRecentlySeenRealtimeTransits(current: Transit[], recentlySeen: Transit[]): Transit[] {
+    const currentIds = new Set(current.map(transit => transit.idCorsa).filter(Boolean));
+    const currentVehicles = new Set(current.map(transit => transit.automezzo?.codice).filter(Boolean));
+    const missingRecent = recentlySeen.filter(transit => {
+        if (!hasVehicleCode(transit)) return false;
+        if (transit.idCorsa && currentIds.has(transit.idCorsa)) return false;
+        const vehicleCode = transit.automezzo?.codice;
+        if (vehicleCode && currentVehicles.has(vehicleCode)) return false;
+        return true;
+    }).map(transit => ({ ...transit, recentlySeenLive: true }));
+
+    return [...current, ...missingRecent];
+}
+
+function mergeRecentlySeenRealtimeTransitsForPole(poleCode: string, current: Transit[]): Transit[] {
+    const now = Date.now();
+    const recentEntries = (recentlySeenRealtimeTransitsByPole.get(poleCode) ?? [])
+        .filter(entry => now - entry.lastSeenAt <= RECENT_REALTIME_TRANSIT_TTL_MS);
+    const merged = mergeRecentlySeenRealtimeTransits(current, recentEntries.map(entry => entry.transit));
+    const nextEntries = new Map<string, { transit: Transit; lastSeenAt: number }>();
+
+    for (const entry of recentEntries) {
+        const key = entry.transit.idCorsa || entry.transit.automezzo?.codice;
+        if (key) nextEntries.set(key, entry);
+    }
+
+    for (const transit of current) {
+        if (!hasVehicleCode(transit)) continue;
+        const key = transit.idCorsa || transit.automezzo?.codice;
+        if (key) nextEntries.set(key, { transit, lastSeenAt: now });
+    }
+
+    recentlySeenRealtimeTransitsByPole.set(poleCode, Array.from(nextEntries.values()).slice(-MAX_TRANSIT_BUTTONS));
+    return merged;
 }
 
 export function formatTransitDelayLabel(delay: string): string {
@@ -129,7 +172,9 @@ export function formatTransitSelectionLine(transit: Transit, index: number, isNe
     const next = isNext ? '💨 ' : '';
     let statusLine: string;
 
-    if (status === 'realtime') {
+    if ((transit as RecentlySeenTransit).recentlySeenLive) {
+        statusLine = `🟠 Ultimo dato live Cotral${vehicle} · non più nel feed transiti`;
+    } else if (status === 'realtime') {
         const delay = transit.ritardo && transit.ritardo !== '00:00'
             ? ` · ${escapeHtml(formatTransitDelayLabel(transit.ritardo))}`
             : ' · puntuale';
@@ -268,7 +313,8 @@ async function renderTransitsByPoleCode(ctx: Context, poleCode: string, mode: Tr
             return;
         }
 
-        const sorted = sortTransitsByDisplayTime(response.transits);
+        const transitsForDisplay = mergeRecentlySeenRealtimeTransitsForPole(poleCode, response.transits);
+        const sorted = sortTransitsByDisplayTime(transitsForDisplay);
         const nextIdx = findNextTransitIndex(sorted);
         const poleName = response.pole?.nomePalina ? escapeHtml(response.pole.nomePalina) : escapeHtml(poleCode);
         const msg = buildTransitSelectionList(sorted, nextIdx, poleName, poleCode, mode);
@@ -343,7 +389,8 @@ export async function showVehiclePositionForTransitByKey(ctx: Context, poleCode:
             return;
         }
 
-        const sorted = sortTransitsByDisplayTime(response.transits);
+        const transitsForSelection = mergeRecentlySeenRealtimeTransitsForPole(poleCode, response.transits);
+        const sorted = sortTransitsByDisplayTime(transitsForSelection);
         const transit = resolveTransitByCallbackKey(sorted, transitKey);
         const vehicleCode = transit?.automezzo?.codice ?? fallbackVehicleCode;
         if (!transit && fallbackVehicleCode) {
@@ -401,7 +448,8 @@ export async function showTransitDetailByKey(ctx: Context, poleCode: string, tra
             return;
         }
 
-        const sorted = sortTransitsByDisplayTime(response.transits);
+        const transitsForSelection = mergeRecentlySeenRealtimeTransitsForPole(poleCode, response.transits);
+        const sorted = sortTransitsByDisplayTime(transitsForSelection);
         const nextIdx = findNextTransitIndex(sorted);
         const transit = resolveTransitByCallbackKey(sorted, transitKey);
         if (!transit) {

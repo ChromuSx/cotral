@@ -8,6 +8,7 @@ import {
     formatTransitButtonLabel,
     formatTransitSelectionLine,
     getTransitDisplayTime,
+    mergeRecentlySeenRealtimeTransits,
     resolveTransitByCallbackKey,
     sortTransitsByDisplayTime,
 } from '../apiHandlers/transitsApiHandler';
@@ -148,6 +149,27 @@ describe('transit selection summary', () => {
 });
 
 describe('stable transit callback keys', () => {
+    it('keeps a recently seen realtime transit when Cotral drops it from the refreshed live list', () => {
+        const disappeared = transit({
+            idCorsa: '11555106',
+            tempoTransito: '18:02',
+            ritardo: '00:33',
+            monitorata: '1',
+            automezzo: { codice: '0118', isAlive: true },
+        });
+        const current = transit({
+            idCorsa: '10146974',
+            tempoTransito: '19:02',
+            monitorata: '1',
+            automezzo: { codice: '0122', isAlive: true },
+        });
+
+        const merged = mergeRecentlySeenRealtimeTransits([current], [disappeared]);
+
+        expect(merged.map(t => t.idCorsa)).toEqual(['10146974', '11555106']);
+        expect(formatTransitSelectionLine(merged[1], 1, false)).toContain('Ultimo dato live Cotral');
+    });
+
     it('builds detail and vehicle-position callback data using idCorsa instead of the list index', () => {
         const selected = transit({ idCorsa: 'corsa-42' });
 
