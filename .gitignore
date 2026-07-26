@@ -16,3 +16,6 @@ packages/server/GTFS_COTRAL/
 # Bot runtime
 packages/telegram-bot/session_db.json
 .claude
+
+# Personal local projects
+/personal/cotral-siri-assistant/
